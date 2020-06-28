@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{{ package.title }}{% endblock %}
+
+{% block contents %}
+<div class="d-flex align-items-center">
+	<div class="container">
+		<h2>{{ package.title }}</h2>
+		<p>
+			<dd class="col-md-7">{{ package.description }}</dd>
+		</p>
+		{% if package.tags %}
+		<h3>Tags</h2>
+		<p>
+			{% for tag in package.tags %}
+			<a href="{{ url_for('index', tags=tag.title) }}">
+				<button type="button" class="btn btn-light">{{ tag.title }}</button>
+			</a>
+			{% endfor %}
+		</p>
+		{% endif %}
+		
+		{% if package.resources or package.dependencies or package.dependants %}
+		<p>
+			<a class="btn btn-info" data-toggle="collapse" href="#package_details" role="button" aria-expanded="false" aria-controls="package_details">
+			Show additional details
+			</a>
+		</p>
+		{% endif %}
+
+		<div id="package_details" class="collapse">
+
+			{% if package.resources %}
+			<div class="card">
+				<div class="card-header"><h3>Files</h3></div>
+				<div class="card-body">
+					<div class="alert alert-light" role="alert">
+						If possible, install all the files by installing {{ package.title }} from within the game.
+					</div>
+					{% for file in package.resources %}
+					<dl class="row">
+						<dt class="col-md-3">
+							<a href="{{ url_for('download_file', file_id=file.id.hex) }}">{{ file.original_filename }}</a>
+						</dt>
+						<dd class="col-md-1 text-secondary text-right">{{ file.get_pretty_printed_size() }}</a></dt>
+						<dd class="col-md-8 text-secondary text-right">SHA1: {{ file.sha1 }}</a></dt>
+					</dl>
+					{% endfor %}
+				</div>
+			</div>
+			{% endif %}
+
+			{% if package.dependencies %}
+			<div class="card">
+				<div class="card-header"><h3>Dependencies</h3></div>
+				<div class="card-body">
+					<div class="alert alert-light" role="alert">
+						These will automatically be installed when you install this from within the game.
+					</div>
+					{% for dep_info in package.dependencies %}
+					<dl class="row">
+						<dt class="col-md-3"><a href="{{ url_for('package_details_page', package_id=dep_info.dependency.id.hex) }}">{{ dep_info.dependency.title }}</a></dt>
+						<dd class="col-md-9">{{ dep_info.dependency.description }}</dt>
+					</dl>
+					{% endfor %}
+				</div>
+			</div>
+			{% endif %}
+
+			{% if package.dependants %}
+			<div class="card">
+				<div class="card-header"><h3>Used by</h3></div>
+				<div class="card-body">
+					<div class="alert alert-light" role="alert">
+						These other packages are using {{ package.title }}.
+					</div>
+					{% for dep_info in package.dependants %}
+					<dl class="row">
+						<dt class="col-md-3"><a href="{{ url_for('package_details_page', package_id=dep_info.package.id.hex) }}">{{ dep_info.package.title }}</a></dt>
+						<dd class="col-md-9">{{ dep_info.package.description }}</dt>
+					</dl>
+					{% endfor %}
+				</div>
+			</div>
+			{% endif %}
+		</div>
+	</div>
+</div>
+{% endblock %}

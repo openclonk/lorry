@@ -1,3 +1,4 @@
+import datetime
 import shutil
 import tempfile
 import os
@@ -15,28 +16,31 @@ def init_test_data():
 	session.commit()
 
 	tags = dict()
-	for tag in ("openclonk-9", ".ocs", ".ocd", ".ocf", "multiplayer", "advertisement", "bundle"):
+	for tag in ("openclonk-9", ".ocs", ".ocd", ".ocf", "multiplayer", "advertisement", "bundle", "test"):
 		t = models.Tag(title=tag)
 		tags[tag] = t
 		session.add(t)
 	session.commit()
 
+	yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
+	last_week = datetime.datetime.now() - datetime.timedelta(days=7)
+
 	packages = []
 	packages.append(models.Package(title="Caedes", author="Zapper, KKenny", description="The very first and the very last.", owner=user1.id))
-	for tag in ("openclonk-9", ".ocd", ".ocf", ".ocs", "multiplayer"):
+	for tag in ("openclonk-9", ".ocd", ".ocf", ".ocs", "multiplayer", "test"):
 		packages[-1].tags.append(tags[tag])
-	packages.append(models.Package(title="Blubb", author="Nicht die Mama", description="I don't know what I am doing.", owner=user1.id))
+	packages.append(models.Package(title="Blubb", author="Nicht die Mama", description="I don't know what I am doing.", owner=user1.id, modification_date=yesterday))
 	for tag in (".ocs",):
 		packages[-1].tags.append(tags[tag])
-	packages.append(models.Package(title="Larry", author="Kanibal", description="Database for mods (but it no work).", owner=user1.id))
-	for tag in ("advertisement",):
+	packages.append(models.Package(title="Larry", author="Kanibal", description="Database for mods (but it no work).", owner=user1.id, modification_date=yesterday))
+	for tag in ("advertisement", "test"):
 		packages[-1].tags.append(tags[tag])
-	packages.append(models.Package(title="Caedesblubb", author="Noone", description="Bundles Caedes and Blubb.", owner=user2.id))
-	for tag in ("bundle", "openclonk-9", ".ocf"):
+	packages.append(models.Package(title="Caedesblubb", author="Noone", description="Bundles Caedes and Blubb.", owner=user2.id, modification_date=last_week))
+	for tag in ("bundle", "openclonk-9", ".ocf", "test"):
 		packages[-1].tags.append(tags[tag])
 	for i in range(2):
 		packages[-1].dependencies.append(models.PackageDependencies(packages[i]))
-	packages.append(models.Package(title="戦争と平和", description="Unicode test.", owner=user2.id))
+	packages.append(models.Package(title="戦争と平和", description="Unicode test.", owner=user2.id, modification_date=last_week))
 
 	files = [os.path.join(models.app.config.get("TEST_DATA_PATH"), file) for file in os.listdir(models.app.config.get("TEST_DATA_PATH"))]
 

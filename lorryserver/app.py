@@ -6,6 +6,7 @@ import jinja2
 import dicttoxml
 import slugify
 import json
+import math
 import uuid
 
 from is_safe_url import is_safe_url
@@ -61,8 +62,10 @@ def get_all_packages(keywords=None, limit_to_tags=None, start=0, limit=None, sor
 			packages = sorted(packages, key=sort_key, reverse=descending)
 
 	n_total = len(packages)
+	if start > 0 and start is not None:
+		packages = packages[start:]
 	if limit is not None:
-		packages = packages[start:limit]
+		packages = packages[:limit]
 	return packages, n_total
 
 def get_logged_in_user(email, password):
@@ -134,11 +137,57 @@ def upload():
 		return flask.redirect(forward_to or flask.url_for('index'))
 	return flask.render_template('upload.html', form=form, error="")
 
+def get_packages_for_current_request():
+	from flask import request
+
+	search_query = request.args.get("q", default=None, type=str)
+	sort_string = request.args.get("sort", default="-updatedAt", type=str)
+	tags = request.args.get("tags", default=None, type=str)
+	limit = request.args.get("limit", default=50, type=int)
+	offset = request.args.get("skip", default=0, type=int)
+
+	page_metadata = dict(search_query=search_query, sort_string=sort_string, tags=tags)
+
+	if tags is not None:
+		tags = tags.split(",")
+	if search_query is not None:
+		search_query = search_query.split(" ")
+	packages, n_total = get_all_packages(keywords=search_query, limit_to_tags=tags, start=offset, limit=limit, sort_string=sort_string)
+
+	return packages, n_total, offset, limit, page_metadata
+
+def get_package_for_raw_package_id(package_id):
+	""" Note that the ID here is user input.
+	"""
+
+	try:
+		parsed_id = uuid.UUID(package_id)
+		package = models.Package.query.get(parsed_id)
+	except:
+		package = None
+	
+	return package
+
 @app.route("/")
 def index():
-	packages, n_total = get_all_packages(limit=10)
+	from flask import request
 
-	return render_template("overview.html", packages=packages)
+	packages, n_total, offset, limit, page_metadata = get_packages_for_current_request()
+	total_pages = math.ceil(n_total / limit)
+	page_index = math.ceil(offset / limit)
+
+	return render_template("overview.html", packages=packages, total_pages=total_pages, page_index=page_index, n_total=n_total,
+							previous_offset=offset - limit, next_offset=offset + limit, page_metadata=page_metadata)
+
+@app.route("/uploads/<string:package_id>", methods=["GET"])
+def package_details_page(package_id):
+
+	package = get_package_for_raw_package_id(package_id)
+
+	if package is None:
+		flask.abort(404, description="File not found.")
+
+	return render_template("package_details.html", package=package)
 
 @app.route("/fetch_tag_suggestion", methods=["GET"])
 @flask_login.login_required
@@ -151,34 +200,20 @@ def fetch_tag_suggestion():
 @app.route("/api/uploads/<string:package_id>", methods=["GET"])
 def get_package_info(package_id):
 
-	package_data = dict()
-	try:
-		parsed_id = uuid.UUID(package_id)
-		package = models.Package.query.get(parsed_id)
-	except:
-		package = None
+	package = get_package_for_raw_package_id(package_id)
 
 	if package is not None:
 		package_data = package.to_dict(detailed=True)
+	else:
+		package_data = dict()
 
 	return flask.Response(dicttoxml.dicttoxml(package_data), mimetype='text/xml')
 
 
 @app.route("/api/uploads", methods=["GET"])
 def get_package_list():
-	from flask import request
-
-	search_query = request.args.get("q", default=None, type=str)
-	sort_string = request.args.get("sort", default=None, type=str)
-	tags = request.args.get("tags", default=None, type=str)
-	limit = request.args.get("limit", default=50, type=int)
-	offset = request.args.get("skip", default=0, type=int)
-
-	if tags is not None:
-		tags = tags.split(",")
-	if search_query is not None:
-		search_query = search_query.split(" ")
-	packages, n_total = get_all_packages(keywords=search_query, limit_to_tags=tags, start=offset, limit=limit, sort_string=sort_string)
+	
+	packages, n_total, offset, limit, page_metadata = get_packages_for_current_request()
 
 	reply = {
 		"meta": {

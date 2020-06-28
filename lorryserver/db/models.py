@@ -164,4 +164,14 @@ class Resource(EditableResource, db.Model):
 	def get_physical_directory_and_filename(self):
 		return resource_manager.get_resource_directory_and_filename(self.sha1)
 
+	# https://stackoverflow.com/a/43690506
+	def get_pretty_printed_size(self, decimal_places=1):
+		size = self.size
+		for unit in ['B','KiB','MiB','GiB','TiB']:
+			if size < 1024.0:
+				break
+			size /= 1024.0
+		return f"{size:.{decimal_places}f}{unit}"
+
+
 
