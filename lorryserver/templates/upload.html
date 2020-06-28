@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Upload{% endblock %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='tagify.css') }}" rel="stylesheet" media="screen">
+{% endblock %}
+
+{% block contents %}
+<div class="d-flex align-items-center">
+	<div class="container input-group input-group-lg">
+		<h2>New Package</h2>
+		<ul class="errors">
+			{% if error %}
+			<li>{{ error }}</li>
+			{% endif %}
+			{% for field_name, field_errors in form.errors|dictsort if field_errors %}
+				{% for error in field_errors %}
+					<li>{{ form[field_name].label }}: {{ error }}</li>
+				{% endfor %}
+			{% endfor %}
+		</ul>
+
+		<form class="form-signin" method="POST" id="input_form">
+			{{ form.hidden_tag() }}
+			{{ form.csrf_token }}
+			<img class="mb-4" src="" alt="" width="72" height="72">	
+			<h1 class="h3 mb-3 font-weight-normal"></h1>
+			<div>{{ form.title.label(class="") }}: {{ form.title(class="form-control input-lg") }}</div>
+			<div>{{ form.author.label(class="") }}: {{ form.author(class="form-control input-lg") }}</div>
+			<div>{{ form.description.label(class="") }}: {{ form.description(class="form-control input-lg") }}</div>
+			<div>{{ form.tags.label(class="") }}: {{ form.tags(class="form-control input-lg tag-input tagify") }}</div>
+			<div>{{ form.files.label(class="") }}: {{ form.files(class="form-control input-lg") }}</div>
+
+			<button class="btn btn-lg btn-primary btn-block" type="submit">Upload</button>
+		</form>
+	</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- tagify is provided by Yair Even-Or under the MIT license: https://github.com/yairEO/tagify -->
+<script src="{{ url_for('static', filename='tagify.js') }}"></script>
+
+<script>
+$(document).ready(function(){
+	var tagify = new Tagify($("#input_form input.tag-input:first")[0], {whitelist:[]});
+	var abort_controller = null;
+
+	function onTagsEdited(e) {
+		var tag_string = e.detail.value;
+		tagify.settings.whitelist.length = 0;
+
+		if (abort_controller)
+			abort_controller.abort();
+		abort_controller = new AbortController();
+		
+		tagify.loading(true).dropdown.hide.call(tagify)
+		fetch('{{ url_for("fetch_tag_suggestion") }}?tag=' + tag_string, { signal:abort_controller.signal })
+			.then(RES => RES.json())
+			.then(function(whitelist){
+			// update inwhitelist Array in-place
+			console.log(whitelist)
+			tagify.settings.whitelist.splice(0, whitelist.length, ...whitelist)
+			tagify.loading(false).dropdown.show.call(tagify, tag_string);
+		})
+	}
+
+	tagify.on('input', onTagsEdited)
+});
+</script>
+{% endblock %}

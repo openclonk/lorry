@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Overview{% endblock %}
+
+{% block contents %}
+<h2>Overview of packages</h2>
+<dl class="row">
+    {% for package in packages %}
+    <dt class="col-md-3">{{ package.title }}</dt>
+	<dd class="col-md-7">{{ package.description }}</dd>
+	<dd class="col-md-2">{{ package.get_tags_string() }}</dd>
+    {% endfor %}
+</dl>
+{% endblock %}

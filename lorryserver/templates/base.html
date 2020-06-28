@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>{% block title %}{% endblock %}</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="http://netdna.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" media="screen">
+		<style type="text/css">
+		</style>
+		{% block head %}
+		{% endblock %}
+	</head>
+	<body>
+		<nav class="navbar navbar-expand-lg navbar-light bg-light">
+			<a class="navbar-brand" href="#">Lorry</a>
+			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+
+			<div class="collapse navbar-collapse" id="navbarSupportedContent">
+				<ul class="navbar-nav mr-auto">
+					<li class="nav-item">
+						<a class="nav-link" href="{{ url_for('index') }}">Home</a>
+					</li>
+					{% if current_user.is_authenticated %}
+					<li class="nav-item">
+						<a class="nav-link" href="{{ url_for('upload') }}">Upload new package</a>
+					</li>
+					<li class="nav-item">
+						<span class="nav-link">Logged in.</span>
+					</li>
+					{% else %}
+					<li class="nav-item">
+						<a class="nav-link" href="{{ url_for('login') }}">Log in</a>
+					</li>
+					{% endif %}
+				</ul>
+			</div>
+		</nav>
+        {% block contents %}{% endblock %}
+		<script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+		<script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+		{% block scripts %}{% endblock %}
+	</body>
+</html>
