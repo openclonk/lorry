@@ -38,8 +38,8 @@ def init_test_data():
 		packages[-1].dependencies.append(models.PackageDependencies(packages[i]))
 	packages.append(models.Package(title="戦争と平和", description="Unicode test.", owner=user2.id))
 
-	files = os.listdir(app.config.get("TEST_DATA_PATH"))
-	
+	files = [os.path.join(models.app.config.get("TEST_DATA_PATH"), file) for file in os.listdir(models.app.config.get("TEST_DATA_PATH"))]
+
 	with tempfile.TemporaryDirectory() as f:
 		for idx, file in enumerate(files):
 			target_file = f + "/" + file.split("/")[-1]
