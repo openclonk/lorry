@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 import pathlib
 import datetime
+import dicttoxml
 import hashlib
 import uuid
 import slugify
@@ -80,6 +81,34 @@ class Package(EditableResource, db.Model):
 	def update_search_text(self):
 		all_text = " ".join((slugify.slugify(s, separator=" ") for s in (self.title, self.description, self.author) + tuple((t.title for t in self.tags)) if s))
 		self.search_text = sqlalchemy.func.to_tsvector(all_text)
+
+	def to_dict(self, detailed=False):
+		d = {
+			"id": self.id.hex,
+			"title": self.title,
+			"author": self.author,
+			"slug": self.get_slug(),
+			"description": self.description,
+			"updatedAt": self.modification_date.isoformat(),
+			"tags": [t.title for t in self.tags]
+		}
+
+		if detailed:
+			d["dependencies"] = [d.dependency_id.hex for d in self.dependencies]
+			d["files"] = []
+			for f in self.resources:
+				d["files"].append({
+					"id": f.id.hex,
+					"filename": f.original_filename,
+					"length": f.size,
+					"sha1": f.sha1,
+					"md5": f.md5,
+				})
+
+		return d
+
+	def to_xml(self, **kwargs):
+		return dicttoxml.dicttoxml(self.to_dict(**kwargs))
 
 class PackageTagAssociation(db.Model):
 	__tablename__ = 'packagetagassociation'

@@ -65,34 +65,6 @@ def get_all_packages(keywords=None, limit_to_tags=None, start=0, limit=None, sor
 		packages = packages[start:limit]
 	return packages, n_total
 
-def package_to_dict(package, detailed=False):
-	d = {
-		"id": package.id.hex,
-		"title": package.title,
-		"author": package.author,
-		"slug": package.get_slug(),
-		"description": package.description,
-		"updatedAt": package.modification_date.isoformat(),
-		"tags": [t.title for t in package.tags]
-	}
-
-	if detailed:
-		d["dependencies"] = [d.dependency_id.hex for d in package.dependencies]
-		d["files"] = []
-		for f in package.resources:
-			d["files"].append({
-				"id": f.id.hex,
-				"filename": f.original_filename,
-				"length": f.size,
-				"sha1": f.sha1,
-				"md5": f.md5,
-			})
-
-	return d
-
-def package_to_xml(package):
-	return dicttoxml.dicttoxml(package_to_dict(package))
-
 def get_logged_in_user(email, password):
 	user = models.User.query.filter_by(email=email).first()
 	if not user:
@@ -187,7 +159,7 @@ def get_package_info(package_id):
 		package = None
 
 	if package is not None:
-		package_data = package_to_dict(package, detailed=True)
+		package_data = package.to_dict(detailed=True)
 
 	return flask.Response(dicttoxml.dicttoxml(package_data), mimetype='text/xml')
 
@@ -213,7 +185,7 @@ def get_package_list():
 				"total": len(packages),
 				"skip": offset,
 		},
-		"resources": [package_to_dict(p) for p in packages],
+		"resources": [p.to_dict() for p in packages],
 	}
 
 	return flask.Response(dicttoxml.dicttoxml(reply), mimetype='text/xml')
