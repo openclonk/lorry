@@ -23,6 +23,9 @@ login_manager = core.get_login_manager()
 # Is enabled by default.
 # csrf = flask_wtf.csrf.CSRFProtect(app=app)
 
+def dict_to_xml(dictionary):
+	return dicttoxml.dicttoxml(dictionary, attr_type=False)
+
 @login_manager.user_loader
 def load_user(user_id):
 	try:
@@ -207,7 +210,7 @@ def get_package_info(package_id):
 	else:
 		package_data = dict()
 
-	return flask.Response(dicttoxml.dicttoxml(package_data), mimetype='text/xml')
+	return flask.Response(dict_to_xml(package_data), mimetype='text/xml')
 
 
 @app.route("/api/uploads", methods=["GET"])
@@ -223,7 +226,7 @@ def get_package_list():
 		"resources": [p.to_dict() for p in packages],
 	}
 
-	return flask.Response(dicttoxml.dicttoxml(reply), mimetype='text/xml')
+	return flask.Response(dict_to_xml(reply), mimetype='text/xml')
 
 @app.route("/api/files/<string:file_id>", methods=["GET"])
 def download_file(file_id):
