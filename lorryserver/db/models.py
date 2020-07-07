@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy
-from sqlalchemy.dialects.postgresql import UUID, TSVECTOR
+from sqlalchemy.dialects.postgresql import UUID, TSVECTOR, TIMESTAMP
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
 import pathlib
@@ -46,8 +46,8 @@ class EditableResource(object):
 	def owner(cls):
 		return db.Column(db.Integer, db.ForeignKey(User.id))
 
-	creation_date = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
-	modification_date = db.Column(db.DateTime, nullable=False, default=datetime.datetime.utcnow)
+	creation_date = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
+	modification_date = db.Column(db.TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.datetime.now(datetime.timezone.utc))
 
 class Tag(db.Model):
 	__tablename__ = "tag"
@@ -62,7 +62,7 @@ class Package(EditableResource, db.Model):
 	search_text = db.Column(TSVECTOR)
 
 	tags = db.relationship(Tag, secondary="packagetagassociation")
-	resources = db.relationship("Resource")
+	resources = db.relationship("Resource", cascade="all,delete-orphan")
 
 	__table_args__ = (
 		db.Index('pck_text_idx', search_text, postgresql_using='gin'),
@@ -139,6 +139,14 @@ class Resource(EditableResource, db.Model):
 	md5 = db.Column(db.String, nullable=False)
 	sha1 = db.Column(db.String, nullable=False)
 	
+	def init_from_file_storage(self, filename, storage):
+		self.original_filename = filename
+		self.assign_hashes_from_buffer(storage)
+		# After hashing, the file pointer will be at the end.
+		self.size = storage.tell()
+		storage.stream.seek(0)
+		resource_manager.store_from_file_storage(self.sha1, storage.stream)
+
 	def init_from_path(self, path):
 		path = pathlib.Path(path)
 		self.original_filename = path.name
@@ -147,16 +155,19 @@ class Resource(EditableResource, db.Model):
 		resource_manager.store_from_filesystem(self.sha1, path)
 
 	def assign_hashes_from_file(self, path):
+		with open(path, "rb") as f:
+			return self.assign_hashes_from_buffer(f)
+
+	def assign_hashes_from_buffer(self, f):
 		sha1 = hashlib.sha1()
 		md5 = hashlib.md5()
 
-		with open(path, "rb") as f:
-			while True:
-				data = f.read(2**16)
-				if not data:
-					break
-				sha1.update(data)
-				md5.update(data)
+		while True:
+			data = f.read(2**16)
+			if not data:
+				break
+			sha1.update(data)
+			md5.update(data)
 
 		self.sha1 = sha1.hexdigest()
 		self.md5 = md5.hexdigest()

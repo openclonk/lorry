@@ -6,6 +6,11 @@
 <div class="d-flex align-items-center">
 	<div class="container">
 		<h2>{{ package.title }}</h2>
+		{% if current_user.id == package.owner %}
+			<a href="{{ url_for('upload', package_id=package.id.hex) }}">
+				<button type="button" class="btn btn-warning">Update</button>
+			</a>
+		{% endif %}
 		<p>
 			<dd class="col-md-7">{{ package.description }}</dd>
 		</p>

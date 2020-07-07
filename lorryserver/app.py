@@ -1,6 +1,7 @@
 import flask
 from flask import render_template
 from wtforms.validators import ValidationError
+import datetime
 import flask_wtf.csrf
 import jinja2
 import dicttoxml
@@ -8,6 +9,7 @@ import slugify
 import json
 import math
 import uuid
+import werkzeug.utils
 
 from is_safe_url import is_safe_url
 import flask_login
@@ -71,6 +73,18 @@ def get_all_packages(keywords=None, limit_to_tags=None, start=0, limit=None, sor
 		packages = packages[:limit]
 	return packages, n_total
 
+def get_package_for_raw_package_id(package_id):
+	""" Note that the ID here is user input.
+	"""
+
+	try:
+		parsed_id = uuid.UUID(package_id)
+		package = models.Package.query.get(parsed_id)
+	except:
+		package = None
+	
+	return package
+
 def get_logged_in_user(email, password):
 	user = models.User.query.filter_by(email=email).first()
 	if not user:
@@ -83,8 +97,17 @@ def get_logged_in_user(email, password):
 	flask_login.login_user(user, remember=True)
 	return user
 
+def check_and_remove_resources(hashes):
+	for hash in hashes:
+		remaining_entries = models.Resource.query.filter_by(sha1=hash).count()
+		print("Remaining for {}: {}".format(hash, remaining_entries))
+		# Check if there are files with that hash remaining.
+		if remaining_entries > 0:
+			continue
+		resources.resource_manager.remove_resource(hash)
+
 @app.route('/login', methods=['GET', 'POST'])
-def login():
+def login_page():
 	if flask_login.current_user.is_authenticated:
 		return flask.redirect(flask.url_for("index"))
 
@@ -104,20 +127,52 @@ def login():
 		return flask.redirect(forward_to or flask.url_for('index'))
 	return flask.render_template('login.html', form=form, error="")
 
-@app.route('/upload', methods=['GET', 'POST'])
+@app.route('/upload', methods=['GET', 'POST'], defaults=dict(package_id=None))
+@app.route('/upload/<string:package_id>', methods=['GET', 'POST'])
 @flask_login.login_required
-def upload():
-	form = forms.UploadForm()
+def upload(package_id):
+
+	existing_package = None
+	is_updating_existing_package = package_id is not None
+	# Quickly verify package ID.
+	if is_updating_existing_package:
+		existing_package = get_package_for_raw_package_id(package_id)
+		if existing_package is None:
+			return flask.abort(400)
+		if existing_package.owner != flask_login.current_user.id:
+			return flask.abort(403)
+
+	form = forms.UploadForm(existing_package)
+
 	if form.validate_on_submit():
+		# Files on the file system will be removed only after all sessions are committed.
+		removed_file_hashes = []
+
 		try:
 			title, author, description, tags = form.title.data, form.author.data, form.description.data, form.tags.data
-			
-			# Prepare new entry.
-			new_entry = models.Package(title=title, author=author, description=description, owner=flask_login.current_user.id)
-			print((title, description, tags))
-			
-			# Search for or create tags.
 			tag_names = [t["value"] for t in json.loads(tags)]
+			tag_objects = []
+			uploaded_files = dict()
+			for file in form.files.data:
+				secure_filename = werkzeug.utils.secure_filename(file.filename)
+				if len(secure_filename) == 0:
+					continue
+				extension = secure_filename.split(".")[-1]
+				if (extension not in app.config.get("ALLOWED_FILE_EXTENSIONS")):
+					raise ValidationError("File extension not allowed: {}".format(extension))
+				uploaded_files[secure_filename] = file
+
+			# Actually storing the files comes a bit later after more validation.
+			def save_files_from_form():
+				resources = []
+				for filename, file_data in uploaded_files.items():
+					resource = models.Resource()
+					resource.init_from_file_storage(filename, file_data)
+					models.db.session.add(resource)
+					resources.append(resource)
+				return resources
+
+			# Search for or create tags.
 			for tag_name in tag_names:
 				# Escaping, normalizing, etc..
 				tag_name = slugify.slugify(tag_name)
@@ -125,20 +180,63 @@ def upload():
 				if tag is None:
 					tag = models.Tag(title=tag_name)
 					models.db.session.add(tag)
-				new_entry.tags.append(tag)
+				tag_objects.append(tag)
 
-			models.db.session.add(new_entry)
+			if not is_updating_existing_package:
+				if len(uploaded_files) == 0:
+					raise ValidationError("Need at least one file.")
+				
+				# Prepare new entry.
+				new_entry = models.Package(title=title, author=author, description=description, owner=flask_login.current_user.id, tags=tag_objects)
+				new_entry.resources = save_files_from_form()
+				models.db.session.add(new_entry)
+				package_id = new_entry.id.hex
+			else:
+				existing_package.title = title
+				existing_package.author = author
+				existing_package.description = description
+				existing_package.tags = tag_objects
+				existing_package.modification_date = datetime.datetime.now(datetime.timezone.utc)
+
+				# Remove all explicitely removed or freshly uploaded files.
+				files_to_remove = set((f for f in form.remove_existing_files.data))
+				for new_filename in uploaded_files:
+					for old_file in existing_package.resources:
+						if old_file.original_filename == new_filename:
+							files_to_remove.add(old_file.id.hex)
+
+				for file in list(existing_package.resources):
+					if file.id.hex in files_to_remove:
+						removed_file_hashes.append(file.sha1)
+						existing_package.resources.remove(file)
+
+				existing_package.resources.extend(save_files_from_form())
+
+				if (len(existing_package.resources) + len(uploaded_files)) == 0:
+					raise ValidationError("Need at least one remaining file.")
+
 			models.db.session.commit()
 
+			if removed_file_hashes:
+				check_and_remove_resources(removed_file_hashes)
+
 		except ValidationError as e:
-			return flask.render_template('upload.html', form=form, error=str(e))
+			models.db.session.rollback()
+			return flask.render_template('upload.html', form=form, error=str(e), existing_package=existing_package)
 
-		forward_to = flask.request.args.get('next')
-		if (forward_to is not None) and not is_safe_url(forward_to, allowed_hosts=[app.config.get("own_host")]):
-			return flask.abort(400)
+		if package_id is not None:
+			return flask.redirect(flask.url_for("package_details_page", package_id=package_id))
+		return flask.redirect(flask.url_for("index"))
 
-		return flask.redirect(forward_to or flask.url_for('index'))
-	return flask.render_template('upload.html', form=form, error="")
+	elif is_updating_existing_package:
+		# Possibly pre-populate fields when updating.
+		form.title.data = existing_package.title
+		form.author.data = existing_package.author
+		form.description.data = existing_package.description
+		form.tags.data = existing_package.get_tags_string()
+
+
+	return flask.render_template('upload.html', form=form, error="", existing_package=existing_package)
 
 def get_packages_for_current_request():
 	from flask import request
@@ -158,18 +256,6 @@ def get_packages_for_current_request():
 	packages, n_total = get_all_packages(keywords=search_query, limit_to_tags=tags, start=offset, limit=limit, sort_string=sort_string)
 
 	return packages, n_total, offset, limit, page_metadata
-
-def get_package_for_raw_package_id(package_id):
-	""" Note that the ID here is user input.
-	"""
-
-	try:
-		parsed_id = uuid.UUID(package_id)
-		package = models.Package.query.get(parsed_id)
-	except:
-		package = None
-	
-	return package
 
 @app.route("/")
 def index():
@@ -197,8 +283,9 @@ def package_details_page(package_id):
 def fetch_tag_suggestion():
 	from flask import request
 
-	tag_string = request.args.get("tag")
-	return flask.jsonify([dict(value=d, searchBy=tag_string) for d in "This is sparta".split(" ")])
+	tag_string = slugify.slugify(request.args.get("tag"))
+	possible_tags = [tag_string] + [t.title for t in models.Tag.query.filter(models.Tag.title.like("%{}%".format(tag_string))).all()]
+	return flask.jsonify([dict(value=d, searchBy=tag_string) for d in possible_tags])
 
 @app.route("/api/uploads/<string:package_id>", methods=["GET"])
 def get_package_info(package_id):

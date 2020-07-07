@@ -4,35 +4,67 @@
 
 {% block head %}
 <link href="{{ url_for('static', filename='tagify.css') }}" rel="stylesheet" media="screen">
+
+<style>
+	.removing-file:before {
+		content: "Deleting ";
+	};
+</style>
 {% endblock %}
 
 {% block contents %}
-<div class="d-flex align-items-center">
+<div class="align-items-center container">
+	<div class="page-header"><h1>{% if existing_package %}Update {{ existing_package.title }}{% else %}Upload new package{% endif %}</h1></div>
 	<div class="container input-group input-group-lg">
-		<h2>New Package</h2>
-		<ul class="errors">
-			{% if error %}
-			<li>{{ error }}</li>
-			{% endif %}
-			{% for field_name, field_errors in form.errors|dictsort if field_errors %}
-				{% for error in field_errors %}
-					<li>{{ form[field_name].label }}: {{ error }}</li>
+		{% if error or form.errors %}
+		<div>
+			<ul class="list-group errors">
+				{% if error %}
+				<li class="list-group-item bg-warning">{{ error }}</li>
+				{% endif %}
+				{% for field_name, field_errors in form.errors|dictsort if field_errors %}
+					{% for error in field_errors %}
+						<li class="list-group-item bg-warning">{{ form[field_name].label }}: {{ error }}</li>
+					{% endfor %}
 				{% endfor %}
-			{% endfor %}
-		</ul>
+			</ul>
+		</div>
+		{% endif %}
 
-		<form class="form-signin" method="POST" id="input_form">
+		<form class="form-signin w-100" method="POST" id="input_form" enctype="multipart/form-data">
 			{{ form.hidden_tag() }}
 			{{ form.csrf_token }}
-			<img class="mb-4" src="" alt="" width="72" height="72">	
 			<h1 class="h3 mb-3 font-weight-normal"></h1>
 			<div>{{ form.title.label(class="") }}: {{ form.title(class="form-control input-lg") }}</div>
 			<div>{{ form.author.label(class="") }}: {{ form.author(class="form-control input-lg") }}</div>
-			<div>{{ form.description.label(class="") }}: {{ form.description(class="form-control input-lg") }}</div>
+			<div>{{ form.description.label(class="") }}: <span class="limited-input-field-label text-secondary"></span> {{ form.description(class="form-control input-lg limited-input-field") }}</div>
 			<div>{{ form.tags.label(class="") }}: {{ form.tags(class="form-control input-lg tag-input tagify") }}</div>
-			<div>{{ form.files.label(class="") }}: {{ form.files(class="form-control input-lg") }}</div>
-
-			<button class="btn btn-lg btn-primary btn-block" type="submit">Upload</button>
+			{% if existing_package %}
+			<br>
+			<div class="card"><div class="card-header">{{ form.remove_existing_files.label(class="") }}:</div>
+				<div class="container btn-group flex-row flex-wrap card-body">
+				{% for subfield in form.remove_existing_files %}
+					<div class="col-md-3">{{ subfield.label(class="form-control btn btn-light delete-file") }}{{ subfield(class="invisible delete-file-checkbox") }}</div>
+				{% endfor %}
+				</div>
+			</div>
+			{% endif %}
+			<br>
+			<div class="card">
+				<div class="card-header">{{ form.files.label(class="") }}</div>
+				<div class="card-body">
+					<div class="alert alert-light" role="alert">
+						Please use only ASCII filenames without spaces for maximum compatibility. Allowed file extensions: {{ ", ".join(config["ALLOWED_FILE_EXTENSIONS"]) }}
+					</div>
+					{{ form.files(class="form-control input-lg") }}
+				</div>
+			</div>
+			<br>
+			<div class="d-flex justify-content-center">
+				<button class="btn btn-lg btn-primary btn-block w-50" type="submit">
+				{% if existing_package %}Update{% else %}Upload{% endif %}
+				</button>
+			</div>
 		</form>
 	</div>
 </div>
@@ -67,6 +99,19 @@ $(document).ready(function(){
 	}
 
 	tagify.on('input', onTagsEdited)
+
+	$("input.delete-file-checkbox").each(function () { $(this).prop('checked', false); });
+	$(".delete-file").click(function () {
+		$(this).toggleClass("btn-light");
+		$(this).toggleClass("btn-danger");
+		$(this).toggleClass("removing-file");
+	});
+
+	$(".limited-input-field").on("input", function(event) {
+		const target = event.currentTarget;
+		const current_length = target.value.length;
+		$(".limited-input-field-label").text("(now at " + current_length + " characters)");
+	});
 });
 </script>
 {% endblock %}
