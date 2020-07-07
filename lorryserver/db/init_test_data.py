@@ -26,21 +26,23 @@ def init_test_data():
 	last_week = datetime.datetime.now() - datetime.timedelta(days=7)
 
 	packages = []
-	packages.append(models.Package(title="Caedes", author="Zapper, KKenny", description="The very first and the very last.", owner=user1.id))
+	packages.append(models.Package(title="Caedes", author="Zapper, KKenny", description="The very first and the very last. At least 50 chars.", owner=user1.id))
 	for tag in ("openclonk-9", ".ocd", ".ocf", ".ocs", "multiplayer", "test"):
 		packages[-1].tags.append(tags[tag])
-	packages.append(models.Package(title="Blubb", author="Nicht die Mama", description="I don't know what I am doing.", owner=user1.id, modification_date=yesterday))
+	packages.append(models.Package(title="Blubb", author="Nicht die Mama", description="I don't know what I am doing. At least 50 chars...", owner=user1.id, modification_date=yesterday))
 	for tag in (".ocs",):
 		packages[-1].tags.append(tags[tag])
-	packages.append(models.Package(title="Larry", author="Kanibal", description="Database for mods (but it no work).", owner=user1.id, modification_date=yesterday))
+	packages.append(models.Package(title="Larry", author="Kanibal", description="Database for mods (but it no work). At least 50 chars.", owner=user1.id, modification_date=yesterday))
 	for tag in ("advertisement", "test"):
 		packages[-1].tags.append(tags[tag])
-	packages.append(models.Package(title="Caedesblubb", author="Noone", description="Bundles Caedes and Blubb.", owner=user2.id, modification_date=last_week))
+	packages.append(models.Package(title="Caedesblubb", author="Noone", description="Bundles Caedes and Blubb. At least 50 chars. At least 50 chars.", owner=user2.id, modification_date=last_week))
 	for tag in ("bundle", "openclonk-9", ".ocf", "test"):
 		packages[-1].tags.append(tags[tag])
 	for i in range(2):
 		packages[-1].dependencies.append(models.PackageDependencies(packages[i]))
-	packages.append(models.Package(title="戦争と平和", description="Unicode test.", owner=user2.id, modification_date=last_week))
+	packages.append(models.Package(title="戦争と平和",
+		description="Unicode test. And also maximum description length test to see whether it looks fine in the interfaces because it should. Otherwise that would suck bad",
+		owner=user2.id, modification_date=last_week))
 
 	files = [os.path.join(models.app.config.get("TEST_DATA_PATH"), file) for file in os.listdir(models.app.config.get("TEST_DATA_PATH"))]
 

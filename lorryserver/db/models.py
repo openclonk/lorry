@@ -75,8 +75,8 @@ class Package(EditableResource, db.Model):
 	def get_slug(self):
 		return slugify.slugify(self.title, max_length=32)
 
-	def get_tags_string(self):
-		return ", ".join([t.title for t in self.tags])
+	def get_tags_string(self, skip_automatic_tags=False):
+		return ", ".join([t.title for t in self.tags if ((not skip_automatic_tags) or t.title[0] != ".")])
 
 	def update_search_text(self):
 		all_text = " ".join((slugify.slugify(s, separator=" ") for s in (self.title, self.description, self.author) + tuple((t.title for t in self.tags)) if s))

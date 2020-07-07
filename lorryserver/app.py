@@ -150,9 +150,12 @@ def upload(package_id):
 
 		try:
 			title, author, description, tags = form.title.data, form.author.data, form.description.data, form.tags.data
-			tag_names = [t["value"] for t in json.loads(tags)]
-			tag_objects = []
+			if tags:
+				tag_names = set((slugify.slugify(t["value"]) for t in json.loads(tags)))
+			else:
+				tag_names = set()
 			uploaded_files = dict()
+
 			for file in form.files.data:
 				secure_filename = werkzeug.utils.secure_filename(file.filename)
 				if len(secure_filename) == 0:
@@ -161,6 +164,11 @@ def upload(package_id):
 				if (extension not in app.config.get("ALLOWED_FILE_EXTENSIONS")):
 					raise ValidationError("File extension not allowed: {}".format(extension))
 				uploaded_files[secure_filename] = file
+				extension_tag = ".{}".format(extension)
+
+				# Automatically tag with extensions.
+				if extension_tag not in tag_names:
+					tag_names.add(extension_tag)
 
 			# Actually storing the files comes a bit later after more validation.
 			def save_files_from_form():
@@ -173,14 +181,16 @@ def upload(package_id):
 				return resources
 
 			# Search for or create tags.
-			for tag_name in tag_names:
-				# Escaping, normalizing, etc..
-				tag_name = slugify.slugify(tag_name)
-				tag = models.Tag.query.filter_by(title=tag_name).first()
-				if tag is None:
-					tag = models.Tag(title=tag_name)
-					models.db.session.add(tag)
-				tag_objects.append(tag)
+			def get_all_tag_objects():
+				tag_objects = []
+				for tag_name in sorted(tag_names):
+					# Escaping, normalizing, etc..
+					tag = models.Tag.query.filter_by(title=tag_name).first()
+					if tag is None:
+						tag = models.Tag(title=tag_name)
+						models.db.session.add(tag)
+					tag_objects.append(tag)
+				return tag_objects
 
 			if not is_updating_existing_package:
 				if len(uploaded_files) == 0:
@@ -195,7 +205,6 @@ def upload(package_id):
 				existing_package.title = title
 				existing_package.author = author
 				existing_package.description = description
-				existing_package.tags = tag_objects
 				existing_package.modification_date = datetime.datetime.now(datetime.timezone.utc)
 
 				# Remove all explicitely removed or freshly uploaded files.
@@ -211,6 +220,17 @@ def upload(package_id):
 						existing_package.resources.remove(file)
 
 				existing_package.resources.extend(save_files_from_form())
+
+				# Update tags with all old file extensions.
+				for resource in existing_package.resources:
+					extension_index = resource.original_filename.rfind(".")
+					if extension_index == -1:
+						continue
+					extension = resource.original_filename[extension_index:]
+					if len(extension) > 1:
+						tag_names.add(extension.lower())
+
+				existing_package.tags = get_all_tag_objects()
 
 				if (len(existing_package.resources) + len(uploaded_files)) == 0:
 					raise ValidationError("Need at least one remaining file.")
@@ -233,7 +253,7 @@ def upload(package_id):
 		form.title.data = existing_package.title
 		form.author.data = existing_package.author
 		form.description.data = existing_package.description
-		form.tags.data = existing_package.get_tags_string()
+		form.tags.data = existing_package.get_tags_string(skip_automatic_tags=True)
 
 
 	return flask.render_template('upload.html', form=form, error="", existing_package=existing_package)
@@ -284,7 +304,7 @@ def fetch_tag_suggestion():
 	from flask import request
 
 	tag_string = slugify.slugify(request.args.get("tag"))
-	possible_tags = [tag_string] + [t.title for t in models.Tag.query.filter(models.Tag.title.like("%{}%".format(tag_string))).all()]
+	possible_tags = [tag_string] + [t.title for t in models.Tag.query.filter(models.Tag.title.like("%{}%".format(tag_string))).all() if t.title[0] != "."]
 	return flask.jsonify([dict(value=d, searchBy=tag_string) for d in possible_tags])
 
 @app.route("/api/uploads/<string:package_id>", methods=["GET"])
