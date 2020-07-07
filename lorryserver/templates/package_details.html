@@ -5,7 +5,8 @@
 {% block contents %}
 <div class="d-flex align-items-center">
 	<div class="container">
-		<h2>{{ package.title }}</h2>
+		<h2>{{ package.title }} <small class="text-secondary float-right">by {{ package.author }}</small></h2>
+		
 		{% if current_user.id == package.owner %}
 			<a href="{{ url_for('upload', package_id=package.id.hex) }}">
 				<button type="button" class="btn btn-warning">Update</button>
