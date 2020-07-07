@@ -16,7 +16,8 @@ def init_test_data():
 	session.commit()
 
 	tags = dict()
-	for tag in ("openclonk-9", ".ocs", ".ocd", ".ocf", "multiplayer", "advertisement", "bundle", "test"):
+	for tag in ("openclonk-9", ".scenario", ".objects", "multiplayer", "advertisement", "bundle", "test",
+				"race", "puzzle", "adventure", "melee"):
 		t = models.Tag(title=tag)
 		tags[tag] = t
 		session.add(t)
@@ -27,16 +28,16 @@ def init_test_data():
 
 	packages = []
 	packages.append(models.Package(title="Caedes", author="Zapper, KKenny", description="The very first and the very last. At least 50 chars.", owner=user1.id))
-	for tag in ("openclonk-9", ".ocd", ".ocf", ".ocs", "multiplayer", "test"):
+	for tag in ("openclonk-9", ".objects", ".scenario", "multiplayer", "test"):
 		packages[-1].tags.append(tags[tag])
 	packages.append(models.Package(title="Blubb", author="Nicht die Mama", description="I don't know what I am doing. At least 50 chars...", owner=user1.id, modification_date=yesterday))
-	for tag in (".ocs",):
+	for tag in (".scenario", "race", "puzzle", "adventure", "melee"):
 		packages[-1].tags.append(tags[tag])
 	packages.append(models.Package(title="Larry", author="Kanibal", description="Database for mods (but it no work). At least 50 chars.", owner=user1.id, modification_date=yesterday))
 	for tag in ("advertisement", "test"):
 		packages[-1].tags.append(tags[tag])
 	packages.append(models.Package(title="Caedesblubb", author="Noone", description="Bundles Caedes and Blubb. At least 50 chars. At least 50 chars.", owner=user2.id, modification_date=last_week))
-	for tag in ("bundle", "openclonk-9", ".ocf", "test"):
+	for tag in ("bundle", "openclonk-9", ".scenario", "test"):
 		packages[-1].tags.append(tags[tag])
 	for i in range(2):
 		packages[-1].dependencies.append(models.PackageDependencies(packages[i]))

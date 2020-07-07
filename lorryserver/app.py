@@ -184,7 +184,12 @@ def upload(package_id):
 			def get_all_tag_objects():
 				tag_objects = []
 				for tag_name in sorted(tag_names):
-					# Escaping, normalizing, etc..
+					if tag_name in (".ocs", ".ocf"):
+						tag_name = ".scenario"
+					elif tag_name == ".ocd":
+						tag_name = ".objects"
+					
+					# The tags are already escaped and normalized here.
 					tag = models.Tag.query.filter_by(title=tag_name).first()
 					if tag is None:
 						tag = models.Tag(title=tag_name)

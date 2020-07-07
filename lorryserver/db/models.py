@@ -68,6 +68,12 @@ class Package(EditableResource, db.Model):
 		db.Index('pck_text_idx', search_text, postgresql_using='gin'),
 	)
 
+	# Immutable collection of tags that have an icon assigned.
+	tags_with_icons = set((
+		".scenario", ".objects", 
+		"melee", "race", "settlement",
+		"puzzle", "adventure", "multiplayer"))
+
 	def has_all_tags(self, tags):
 		own_tags = set((t.title for t in self.tags))
 		return len((tags & own_tags)) == len(tags)
@@ -77,6 +83,17 @@ class Package(EditableResource, db.Model):
 
 	def get_tags_string(self, skip_automatic_tags=False):
 		return ", ".join([t.title for t in self.tags if ((not skip_automatic_tags) or t.title[0] != ".")])
+
+	def get_tags_with_icons(self):
+		for tag in self.tags:
+			tag = tag.title
+			if tag in self.tags_with_icons:
+				if tag[0] == ".":
+					yield tag[1:], tag
+				else:
+					yield tag, tag
+			elif tag.startswith("openclonk-"):
+				yield "openclonk", tag
 
 	def update_search_text(self):
 		all_text = " ".join((slugify.slugify(s, separator=" ") for s in (self.title, self.description, self.author) + tuple((t.title for t in self.tags)) if s))

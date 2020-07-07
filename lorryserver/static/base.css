@@ -1,0 +1,53 @@
+.tag-icon-container {
+	display: block;
+	float: right;
+	max-width: 20px;
+	max-height: 20px;
+	overflow: hidden;
+}
+.tag-icon {
+	display: block;
+	width: 40px;
+	height: 40px;
+	max-width: 40px;
+	max-height: 40px;
+    zoom:0.5;
+    -moz-transform:scale(0.5);
+    -moz-transform-origin: 0 0;
+}
+.icon-openclonk {
+  
+  background: url(GUIIcons.png) no-repeat;
+}
+
+.icon-multiplayer {
+  background: url(GUIIcons.png) -40px -120px no-repeat;
+}
+
+.icon-melee {
+  background: url(GUIIcons.png) -160px -280px no-repeat;
+}
+
+.icon-race {
+  background: url(GUIIcons.png) -0px -200px no-repeat;
+}
+
+.icon-scenario {
+  background: url(GUIIcons.png) -160px -120px no-repeat;
+}
+
+.icon-objects {
+  background: url(GUIIcons.png) -200px -160px no-repeat;
+}
+
+.icon-settlement {
+  background: url(GUIIcons.png) -120px -320px no-repeat;
+}
+
+.icon-puzzle {
+  background: url(GUIIcons.png) -160px -160px no-repeat;
+}
+
+.icon-adventure {
+  background: url(GUIIcons.png) -120px -120px no-repeat;
+}

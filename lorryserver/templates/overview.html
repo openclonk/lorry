@@ -10,7 +10,13 @@
 	<div class="row list-group-item-action">
 	
 	<div class="col-md-3"><b>{{ package.title }}</b></div>
-	<div class="col-md-7">{{ package.description }}</div>
+	<div class="col-md-7">{{ package.description }}
+		<span class="float-right" style="max-height: 20px">
+			{% for (icon, tag_name) in package.get_tags_with_icons() %}
+			<span class="tag-icon-container"><span title="{{ tag_name }}" class="tag-icon icon-{{ icon }}"></span></span>
+			{% endfor %}
+		</span>
+	</div>
 	<!---<div class="col-md-1">{{ package.get_tags_string() }}</div>--->
 	<div class="col-md-2 text-secondary">{{ package.author }}</div>
 	</div>
