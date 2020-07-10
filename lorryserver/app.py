@@ -127,6 +127,11 @@ def login_page():
 		return flask.redirect(forward_to or flask.url_for('index'))
 	return flask.render_template('login.html', form=form, error="")
 
+def get_all_packages_for_suggestion_list():
+	package_data = models.Package.query.with_entities(models.Package.id, models.Package.title).all()
+	package_data = [dict(value="{} {}".format(id.hex, title)) for (id, title) in package_data]
+	return json.dumps(package_data)
+
 @app.route('/upload', methods=['GET', 'POST'], defaults=dict(package_id=None))
 @app.route('/upload/<string:package_id>', methods=['GET', 'POST'])
 @flask_login.login_required
@@ -149,13 +154,27 @@ def upload(package_id):
 		removed_file_hashes = []
 
 		try:
-			title, author, description, tags = form.title.data, form.author.data, form.description.data, form.tags.data
+			title, author, description, tags, raw_dependencies = form.title.data, form.author.data, form.description.data, form.tags.data, form.dependencies.data
+			# Parse and escape tags.
 			if tags:
 				tag_names = set((slugify.slugify(t["value"]) for t in json.loads(tags)))
 			else:
 				tag_names = set()
-			uploaded_files = dict()
+			
+			# Parse and verify dependencies.
+			dependencies = []
+			dependency_ids = set()
+			if raw_dependencies:
+				for dependency_string in json.loads(raw_dependencies):
+					dependency_string = dependency_string["value"].split(" ")[0]
+					dependency = get_package_for_raw_package_id(dependency_string)
+					if (not dependency) or ((is_updating_existing_package and (dependency.id == existing_package.id))):
+						continue
+					dependencies.append(dependency)
+					dependency_ids.add(dependency.id)
 
+			# Parse and verify uploaded filenames. Save them later.
+			uploaded_files = dict()
 			for file in form.files.data:
 				secure_filename = werkzeug.utils.secure_filename(file.filename)
 				if len(secure_filename) == 0:
@@ -225,6 +244,8 @@ def upload(package_id):
 						existing_package.resources.remove(file)
 
 				existing_package.resources.extend(save_files_from_form())
+				if (len(existing_package.resources) + len(uploaded_files)) == 0:
+					raise ValidationError("Need at least one remaining file.")
 
 				# Update tags with all old file extensions.
 				for resource in existing_package.resources:
@@ -237,8 +258,17 @@ def upload(package_id):
 
 				existing_package.tags = get_all_tag_objects()
 
-				if (len(existing_package.resources) + len(uploaded_files)) == 0:
-					raise ValidationError("Need at least one remaining file.")
+				# Remove old dependencies.
+				existing_dependencies = set()
+				for dependency_info in list(existing_package.dependencies):
+					if dependency_info.dependency_id not in dependency_ids:
+						existing_package.dependencies.remove(dependency_info)
+					else:
+						existing_dependencies.add(dependency_info.dependency_id)
+				# And add new dependencies.
+				for dependency in dependencies:
+					if dependency.id not in existing_dependencies:
+						existing_package.dependencies.append(models.PackageDependencies(dependency))
 
 			models.db.session.commit()
 
@@ -247,7 +277,8 @@ def upload(package_id):
 
 		except ValidationError as e:
 			models.db.session.rollback()
-			return flask.render_template('upload.html', form=form, error=str(e), existing_package=existing_package)
+			return flask.render_template('upload.html', form=form, error=str(e), existing_package=existing_package,
+											dependencies_whitelist=get_all_packages_for_suggestion_list())
 
 		if package_id is not None:
 			return flask.redirect(flask.url_for("package_details_page", package_id=package_id))
@@ -259,9 +290,11 @@ def upload(package_id):
 		form.author.data = existing_package.author
 		form.description.data = existing_package.description
 		form.tags.data = existing_package.get_tags_string(skip_automatic_tags=True)
+		form.dependencies.data = existing_package.get_dependency_string()
 
 
-	return flask.render_template('upload.html', form=form, error="", existing_package=existing_package)
+	return flask.render_template('upload.html', form=form, error="", existing_package=existing_package,
+									dependencies_whitelist=get_all_packages_for_suggestion_list())
 
 def get_packages_for_current_request():
 	from flask import request

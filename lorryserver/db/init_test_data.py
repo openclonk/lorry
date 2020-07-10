@@ -33,10 +33,10 @@ def init_test_data():
 	packages.append(models.Package(title="Blubb", author="Nicht die Mama", description="I don't know what I am doing. At least 50 chars...", owner=user1.id, modification_date=yesterday))
 	for tag in (".scenario", "race", "puzzle", "adventure", "melee"):
 		packages[-1].tags.append(tags[tag])
-	packages.append(models.Package(title="Larry", author="Kanibal", description="Database for mods (but it no work). At least 50 chars.", owner=user1.id, modification_date=yesterday))
+	packages.append(models.Package(title="Larry", author="Kanibal", description="Database for mods (but it no work). At least 50 chars.", owner=user2.id, modification_date=yesterday))
 	for tag in ("advertisement", "test"):
 		packages[-1].tags.append(tags[tag])
-	packages.append(models.Package(title="Caedesblubb", author="Noone", description="Bundles Caedes and Blubb. At least 50 chars. At least 50 chars.", owner=user2.id, modification_date=last_week))
+	packages.append(models.Package(title="Caedesblubb", author="Noone", description="Bundles Caedes and Blubb. At least 50 chars. At least 50 chars.", owner=user1.id, modification_date=last_week))
 	for tag in ("bundle", "openclonk-9", ".scenario", "test"):
 		packages[-1].tags.append(tags[tag])
 	for i in range(2):

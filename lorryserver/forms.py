@@ -27,6 +27,7 @@ class UploadForm(FlaskForm):
 	description = StringField("Short description of 50-150 characters", [validators.Length(min=50, max=150)], widget=TextArea(),
 								render_kw={"minlength": 50, "maxlength": 150})
 	tags = StringField("Tags")
+	dependencies = StringField("Dependencies")
 
 	files = MultipleFileField("Upload file(s)", [FileAllowed(app.config.get("ALLOWED_FILE_EXTENSIONS"))], render_kw={'multiple': True})
 	remove_existing_files = MultiCheckboxField("Delete existing files", choices=[])

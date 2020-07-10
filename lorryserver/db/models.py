@@ -1,6 +1,6 @@
-from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 import sqlalchemy
+from sqlalchemy.orm import backref
 from sqlalchemy.dialects.postgresql import UUID, TSVECTOR, TIMESTAMP
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.ext.associationproxy import association_proxy
@@ -10,6 +10,7 @@ import dicttoxml
 import hashlib
 import uuid
 import slugify
+import json
 
 from ..utils.resources import resource_manager
 from .. import core
@@ -95,6 +96,11 @@ class Package(EditableResource, db.Model):
 			elif tag.startswith("openclonk-"):
 				yield "openclonk", tag
 
+	def get_dependency_string(self):
+		"""Returns the dependencies as a json string that can be passed to tagify.
+		"""
+		return json.dumps([dict(value="{} {}".format(d.dependency.id.hex, d.dependency.title)) for d in self.dependencies])
+
 	def update_search_text(self):
 		all_text = " ".join((slugify.slugify(s, separator=" ") for s in (self.title, self.description, self.author) + tuple((t.title for t in self.tags)) if s))
 		self.search_text = sqlalchemy.func.to_tsvector(all_text)
@@ -142,10 +148,10 @@ class PackageDependencies(db.Model):
 
 	package = db.relationship(Package,
 								primaryjoin=(package_id == Package.id),
-								backref="dependencies")
+								backref=backref("dependencies", cascade="all,delete,delete-orphan"))
 	dependency = db.relationship(Package,
 								primaryjoin=(dependency_id == Package.id),
-								backref="dependants")
+								backref=backref("dependants", cascade="all,delete,delete-orphan"))
 
 class Resource(EditableResource, db.Model):
 	__tablename__ = 'resource'

@@ -54,9 +54,20 @@
 				<div class="card-header">{{ form.files.label(class="") }}</div>
 				<div class="card-body">
 					<div class="alert alert-light" role="alert">
-						Please use only ASCII filenames without spaces for maximum compatibility. Allowed file extensions: {{ ", ".join(config["ALLOWED_FILE_EXTENSIONS"]) }}
+						Please use only ASCII filenames without spaces for maximum compatibility. Allowed file extensions: {{ ", ".join(config["ALLOWED_FILE_EXTENSIONS"]) }}.<br>
+						Every package needs at least one file.
 					</div>
 					{{ form.files(class="form-control input-lg") }}
+				</div>
+			</div>
+			<br>
+			<div class="card">
+				<div class="card-header">{{ form.dependencies.label(class="") }}</div>
+				<div class="card-body">
+					<div class="alert alert-light" role="alert">
+						These dependencies will automatically be installed when your package is installed from the game. If you do not need additional packages to be installed, leave this empty.
+					</div>
+				<div>{{ form.dependencies(class="form-control input-lg dependency-input tagify") }}</div>
 				</div>
 			</div>
 			<br>
@@ -92,13 +103,14 @@ $(document).ready(function(){
 			.then(RES => RES.json())
 			.then(function(whitelist){
 			// update inwhitelist Array in-place
-			console.log(whitelist)
 			tagify.settings.whitelist.splice(0, whitelist.length, ...whitelist)
 			tagify.loading(false).dropdown.show.call(tagify, tag_string);
 		})
 	}
 
 	tagify.on('input', onTagsEdited)
+
+	var dependencies_tagify = new Tagify($("#input_form input.dependency-input:first")[0], {whitelist:{{ dependencies_whitelist|safe }}, enforceWhitelist: true, editTags: false});
 
 	$("input.delete-file-checkbox").each(function () { $(this).prop('checked', false); });
 	$(".delete-file").click(function () {
