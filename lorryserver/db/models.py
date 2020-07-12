@@ -101,6 +101,25 @@ class Package(EditableResource, db.Model):
 		"""
 		return json.dumps([dict(value="{} {}".format(d.dependency.id.hex, d.dependency.title)) for d in self.dependencies])
 
+	def is_dependent_on(self, other_package):
+		"""Recursively checks whether dependencies contain the other package.
+		"""
+		already_checked_ids = set()
+		dependencies = list(self.dependencies)
+		while len(dependencies) > 0:
+			dependency_info = dependencies.pop()
+			already_checked_ids.add(dependency_info.dependency_id)
+			if dependency_info.dependency_id == other_package.id:
+				return True
+
+			# Recursively add dependencies.
+			for recursive_dependency in dependency_info.dependency.dependencies:
+				if recursive_dependency.dependency_id in already_checked_ids:
+					continue
+				dependencies.append(recursive_dependency)
+			
+		return False
+
 	def update_search_text(self):
 		all_text = " ".join((slugify.slugify(s, separator=" ") for s in (self.title, self.description, self.author) + tuple((t.title for t in self.tags)) if s))
 		self.search_text = sqlalchemy.func.to_tsvector(all_text)
@@ -206,6 +225,7 @@ class Resource(EditableResource, db.Model):
 				break
 			size /= 1024.0
 		return f"{size:.{decimal_places}f}{unit}"
+
 
 
 

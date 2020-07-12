@@ -170,6 +170,9 @@ def upload(package_id):
 					dependency = get_package_for_raw_package_id(dependency_string)
 					if (not dependency) or ((is_updating_existing_package and (dependency.id == existing_package.id))):
 						continue
+					# Prevent circular dependencies.
+					if is_updating_existing_package and dependency.is_dependent_on(existing_package):
+						continue
 					dependencies.append(dependency)
 					dependency_ids.add(dependency.id)
 
