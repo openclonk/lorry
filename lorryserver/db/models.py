@@ -21,9 +21,12 @@ db = SQLAlchemy(app)
 
 class User(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
+	# External ID for SSO service.
+	external_id = db.Column(db.Integer, index=True)
+	
 	name = db.Column(db.String)
-	email = db.Column(db.String)
-	password = db.Column(db.String)
+	# Whether this user can edit other people's things.
+	is_moderator = db.Column(db.Boolean, default=False)
 
 	@property
 	def is_authenticated(self):

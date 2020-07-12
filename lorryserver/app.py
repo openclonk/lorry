@@ -88,15 +88,24 @@ def get_package_for_raw_package_id(package_id):
 	
 	return package
 
-def get_logged_in_user(email, password):
-	user = models.User.query.filter_by(email=email).first()
-	if not user:
-		# Still do the password run to make timing attacks harder.
-		passwords.hash_password(password)
-		raise ValidationError("Incorrect login information provided.")
-	if not passwords.check_hashed_password(password, user.password):
-		raise ValidationError("Incorrect login information provided.")
-	
+def get_logged_in_user(external_id, username, is_moderator=False):
+	try:
+		external_id = int(external_id)
+	except:
+		return None
+
+	user = models.User.query.filter_by(external_id=external_id).first()
+
+	if user:
+		# Update the data in case the name changed etc.
+		user.name = username
+		user.is_moderator = is_moderator
+	else:
+		# Create a new user and log them in.
+		user = models.User(external_id=external_id, name=username, is_moderator=is_moderator)
+		models.db.session.add(user)
+
+	models.db.session.commit()
 	flask_login.login_user(user, remember=True)
 	return user
 
@@ -109,64 +118,68 @@ def check_and_remove_resources(hashes):
 		resources.resource_manager.remove_resource(hash)
 
 @app.route('/login', methods=['GET', 'POST'])
+@app.route('/login_page', methods=['GET', 'POST']) # Todo: Remove second route once deployed.
 def login_page():
 	if flask_login.current_user.is_authenticated:
 		return flask.redirect(flask.url_for("index"))
 
-	# Two modi, either use SSO if configured or login with email/password.
+	# Assume that SSO is configured.
 	sso_endpoint = app.config.get("SSO_ENDPOINT")
-	if sso_endpoint:
-		if "sso" in flask.request.args:
-			# The user has already logged in.
-			sso_response = base64.decodestring(flask.request.args['sso'].encode()).decode()
-			sso_response = urllib.parse.parse_qs(sso_response)
-			print(sso_response)
-			if ("nonce" not in flask.session) or (flask.session["nonce"] != sso_response["nonce"]):
-				flask.session.clear()
-				return flask.redirect("login_page")
-			flask.session["nonce"] = None
-			print("Logged in user with name {} email {}".format(sso_response["email"], sso_response["external_id"]))
-			
-			forward_to = flask.session["forward_to"]
-			if (forward_to is not None) and not is_safe_url(forward_to, allowed_hosts=[app.config.get("own_host")]):
-				return flask.abort(400)
-			flask.session["forward_to"] = None
+	if not sso_endpoint:
+		return flask.abort(404)
+	
+	if "sso" in flask.request.args:
+		# The user has already logged in. Process the SSO service response.
+		# Verify the response signature first.
+		if not passwords.verify_sso_response_signature(flask.request.args["sso"].encode(), flask.request.args["sig"], app.config.get("SSO_HMAC_SECRET")):
+			flask.session.clear()
+			return flask.abort(403)
+		# Parse response.
+		sso_response = base64.decodestring(flask.request.args["sso"].encode()).decode()
+		sso_response = urllib.parse.parse_qs(sso_response)
+		# Same local user that did the request?
+		if ("nonce" not in flask.session) or (flask.session["nonce"] != sso_response["nonce"][0]):
+			flask.session.clear()
+			return flask.abort(403)
+		flask.session.pop("nonce", None)
+		
+		# Retrieve or create user.
+		is_moderator = False
+		external_id, username, groups = sso_response["external_id"][0], sso_response["username"][0], sso_response["groups"][0]
+		if len(groups) > 0 and groups:
+			groups = groups.split(",")
+			if "Lorry Moderators" in groups:
+				is_moderator = True
 
-			return flask.redirect(forward_to or flask.url_for('index'))
+		user = get_logged_in_user(external_id, username, is_moderator)
+		if user is None:
+			print("User could not be created")
+			return flask.abort(500)
 
-		flask.session["nonce"] = passwords.generate_nonce()
-		flask.session["forward_to"] = flask.request.args.get('next')
+		assert flask_login.current_user.is_authenticated
 
-		payload = dict(nonce=flask.session["nonce"], return_sso_url=app.config.get("SSO_RETURN_URL"))
-		payload = urllib.parse.urlencode(payload)
-		payload = base64.b64encode(payload.encode())
-		payload = dict(sig=passwords.generate_sso_payload_signature(payload, app.config.get("SSO_HMAC_SECRET")),
-					   sso=payload.decode())
-		return flask.redirect("{}?{}".format(sso_endpoint, urllib.parse.urlencode(payload)))
-	else:
-		# Normal login.
-		form = forms.LoginForm()
-		if form.validate_on_submit():
-			email, password = form.email.data, form.password.data
-			try:
-				user = get_logged_in_user(email, password)
-				assert flask_login.current_user.is_authenticated
-			except ValidationError as e:
-				return flask.render_template('login.html', form=form, error=str(e))
+		forward_to = flask.session["forward_to"]
+		if (forward_to is not None) and not is_safe_url(forward_to, allowed_hosts=[app.config.get("own_host")]):
+			return flask.abort(400)
+		flask.session.pop("forward_to", None)
+		return flask.redirect(forward_to or flask.url_for('index'))
 
-			forward_to = flask.request.args.get('next')
-			if (forward_to is not None) and not is_safe_url(forward_to, allowed_hosts=[app.config.get("own_host")]):
-				return flask.abort(400)
+	flask.session["nonce"] = passwords.generate_nonce()
+	flask.session["forward_to"] = flask.request.args.get('next')
 
-			return flask.redirect(forward_to or flask.url_for('index'))
-		return flask.render_template('login.html', form=form, error="")
+	payload = dict(nonce=flask.session["nonce"], return_sso_url=app.config.get("SSO_RETURN_URL"))
+	payload = urllib.parse.urlencode(payload)
+	payload = base64.b64encode(payload.encode())
+	payload = dict(sig=passwords.generate_sso_payload_signature(payload, app.config.get("SSO_HMAC_SECRET")),
+					sso=payload.decode())
+	return flask.redirect("{}?{}".format(sso_endpoint, urllib.parse.urlencode(payload)))
 
 @app.route('/logout')
 @flask_login.login_required
 def logout_page():
 	flask_login.logout_user()
 	flask.session.clear()
-	response = flask.make_response(flask.redirect(flask.url_for("login_page")))
+	response = flask.make_response(flask.redirect(flask.url_for("index")))
 	# Forcibly expire the "remember_me" token.
 	response.set_cookie("remember_token", "", expires=datetime.datetime.now() - datetime.timedelta(days=1))
 	return response
@@ -188,7 +201,7 @@ def upload(package_id):
 		existing_package = get_package_for_raw_package_id(package_id)
 		if existing_package is None:
 			return flask.abort(400)
-		if existing_package.owner != flask_login.current_user.id:
+		if (existing_package.owner != flask_login.current_user.id) and not flask_login.current_user.is_moderator:
 			return flask.abort(403)
 
 	form = forms.UploadForm(existing_package)
