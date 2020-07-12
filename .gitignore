@@ -3,6 +3,8 @@ venv/
 lorryserver/static/tagify.js
 lorryserver/static/tagify.min.js
 lorryserver/static/tagify.css
+# This is the standard icon file from the Graphics.ocg folder.
+lorryserver/static/GUIIcons.png
 
 lorryserver/config.py
 
