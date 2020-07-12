@@ -1,11 +1,14 @@
+import base64
 import flask
 from flask import render_template
 from wtforms.validators import ValidationError
 import datetime
 import flask_wtf.csrf
+import hmac
 import jinja2
 import dicttoxml
 import slugify
+import urllib
 import json
 import math
 import uuid
@@ -111,21 +114,53 @@ def login_page():
 	if flask_login.current_user.is_authenticated:
 		return flask.redirect(flask.url_for("index"))
 
-	form = forms.LoginForm()
-	if form.validate_on_submit():
-		email, password = form.email.data, form.password.data
-		try:
-			user = get_logged_in_user(email, password)
-			assert flask_login.current_user.is_authenticated
-		except ValidationError as e:
-			return flask.render_template('login.html', form=form, error=str(e))
+	# Two modi, either use SSO if configured or login with email/password.
+	sso_endpoint = app.config.get("SSO_ENDPOINT")
+	if sso_endpoint:
+		if "sso" in flask.request.args:
+			# The user has already logged in.
+			sso_response = base64.decodestring(flask.request.args['sso'].encode()).decode()
+			sso_response = urllib.parse.parse_qs(sso_response)
+			print(sso_response)
+			if ("nonce" not in flask.session) or (flask.session["nonce"] != sso_response["nonce"]):
+				flask.session.clear()
+				return flask.redirect("login_page")
+			flask.session["nonce"] = None
+			print("Logged in user with name {} email {}".format(sso_response["email"], sso_response["external_id"]))
+			
+			forward_to = flask.session["forward_to"]
+			if (forward_to is not None) and not is_safe_url(forward_to, allowed_hosts=[app.config.get("own_host")]):
+				return flask.abort(400)
+			flask.session["forward_to"] = None
 
-		forward_to = flask.request.args.get('next')
-		if (forward_to is not None) and not is_safe_url(forward_to, allowed_hosts=[app.config.get("own_host")]):
-			return flask.abort(400)
+			return flask.redirect(forward_to or flask.url_for('index'))
 
-		return flask.redirect(forward_to or flask.url_for('index'))
-	return flask.render_template('login.html', form=form, error="")
+		flask.session["nonce"] = passwords.generate_nonce()
+		flask.session["forward_to"] = flask.request.args.get('next')
+
+		payload = dict(nonce=flask.session["nonce"], return_sso_url=app.config.get("SSO_RETURN_URL"))
+		payload = urllib.parse.urlencode(payload)
+		payload = base64.b64encode(payload.encode())
+		payload = dict(sig=passwords.generate_sso_payload_signature(payload, app.config.get("SSO_HMAC_SECRET")),
+					   sso=payload.decode())
+		return flask.redirect("{}?{}".format(sso_endpoint, urllib.parse.urlencode(payload)))
+	else:
+		# Normal login.
+		form = forms.LoginForm()
+		if form.validate_on_submit():
+			email, password = form.email.data, form.password.data
+			try:
+				user = get_logged_in_user(email, password)
+				assert flask_login.current_user.is_authenticated
+			except ValidationError as e:
+				return flask.render_template('login.html', form=form, error=str(e))
+
+			forward_to = flask.request.args.get('next')
+			if (forward_to is not None) and not is_safe_url(forward_to, allowed_hosts=[app.config.get("own_host")]):
+				return flask.abort(400)
+
+			return flask.redirect(forward_to or flask.url_for('index'))
+		return flask.render_template('login.html', form=form, error="")
 
 def get_all_packages_for_suggestion_list():
 	package_data = models.Package.query.with_entities(models.Package.id, models.Package.title).all()
