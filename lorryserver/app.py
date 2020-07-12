@@ -103,7 +103,6 @@ def get_logged_in_user(email, password):
 def check_and_remove_resources(hashes):
 	for hash in hashes:
 		remaining_entries = models.Resource.query.filter_by(sha1=hash).count()
-		print("Remaining for {}: {}".format(hash, remaining_entries))
 		# Check if there are files with that hash remaining.
 		if remaining_entries > 0:
 			continue
@@ -259,54 +258,67 @@ def upload(package_id):
 					raise ValidationError("Need at least one file.")
 				
 				# Prepare new entry.
-				new_entry = models.Package(title=title, author=author, description=description, owner=flask_login.current_user.id, tags=tag_objects)
+				new_entry = models.Package(title=title, author=author, description=description, owner=flask_login.current_user.id, tags=get_all_tag_objects())
 				new_entry.resources = save_files_from_form()
 				models.db.session.add(new_entry)
 				package_id = new_entry.id.hex
 			else:
-				existing_package.title = title
-				existing_package.author = author
-				existing_package.description = description
-				existing_package.modification_date = datetime.datetime.now(datetime.timezone.utc)
 
-				# Remove all explicitely removed or freshly uploaded files.
-				files_to_remove = set((f for f in form.remove_existing_files.data))
-				for new_filename in uploaded_files:
-					for old_file in existing_package.resources:
-						if old_file.original_filename == new_filename:
-							files_to_remove.add(old_file.id.hex)
+				# Is the package marked for deletion?
+				if form.delete_entry.data:
+					if (form.delete_entry.data != existing_package.title):
+						raise ValidationError("Package deletion failed. Title was not confirmed.")
+					for file in existing_package.resources:
+						if file.id.hex not in removed_file_hashes:
+							removed_file_hashes.append(file.sha1)
+					# All the other things will be deleted in a cascade.
+					models.db.session.delete(existing_package)
+					package_id = None
+				else:
+					# Not deleted this time. Update everything.
+					existing_package.title = title
+					existing_package.author = author
+					existing_package.description = description
+					existing_package.modification_date = datetime.datetime.now(datetime.timezone.utc)
 
-				for file in list(existing_package.resources):
-					if file.id.hex in files_to_remove:
-						removed_file_hashes.append(file.sha1)
-						existing_package.resources.remove(file)
+					# Remove all explicitely removed or freshly uploaded files.
+					files_to_remove = set((f for f in form.remove_existing_files.data))
+					for new_filename in uploaded_files:
+						for old_file in existing_package.resources:
+							if old_file.original_filename == new_filename:
+								files_to_remove.add(old_file.id.hex)
 
-				existing_package.resources.extend(save_files_from_form())
-				if (len(existing_package.resources) + len(uploaded_files)) == 0:
-					raise ValidationError("Need at least one remaining file.")
+					for file in list(existing_package.resources):
+						if file.id.hex in files_to_remove:
+							removed_file_hashes.append(file.sha1)
+							existing_package.resources.remove(file)
 
-				# Update tags with all old file extensions.
-				for resource in existing_package.resources:
-					extension_index = resource.original_filename.rfind(".")
-					if extension_index == -1:
-						continue
-					extension = resource.original_filename[extension_index:]
-					if len(extension) > 1:
-						tag_names.add(extension.lower())
+					existing_package.resources.extend(save_files_from_form())
+					if (len(existing_package.resources) + len(uploaded_files)) == 0:
+						raise ValidationError("Need at least one remaining file.")
 
-				existing_package.tags = get_all_tag_objects()
+					# Update tags with all old file extensions.
+					for resource in existing_package.resources:
+						extension_index = resource.original_filename.rfind(".")
+						if extension_index == -1:
+							continue
+						extension = resource.original_filename[extension_index:]
+						if len(extension) > 1:
+							tag_names.add(extension.lower())
 
-				# Remove old dependencies.
-				existing_dependencies = set()
-				for dependency_info in list(existing_package.dependencies):
-					if dependency_info.dependency_id not in dependency_ids:
-						existing_package.dependencies.remove(dependency_info)
-					else:
-						existing_dependencies.add(dependency_info.dependency_id)
-				# And add new dependencies.
-				for dependency in dependencies:
-					if dependency.id not in existing_dependencies:
-						existing_package.dependencies.append(models.PackageDependencies(dependency))
+					existing_package.tags = get_all_tag_objects()
+
+					# Remove old dependencies.
+					existing_dependencies = set()
+					for dependency_info in list(existing_package.dependencies):
+						if dependency_info.dependency_id not in dependency_ids:
+							existing_package.dependencies.remove(dependency_info)
+						else:
+							existing_dependencies.add(dependency_info.dependency_id)
+					# And add new dependencies.
+					for dependency in dependencies:
+						if dependency.id not in existing_dependencies:
+							existing_package.dependencies.append(models.PackageDependencies(dependency))
 
 			models.db.session.commit()
 

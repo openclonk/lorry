@@ -26,6 +26,8 @@ class UploadForm(FlaskForm):
 	author = StringField("Author")
 	description = StringField("Short description of 50-150 characters", [validators.Length(min=50, max=150)], widget=TextArea(),
 								render_kw={"minlength": 50, "maxlength": 150})
+	delete_entry = StringField("Delete")
+	
 	tags = StringField("Tags")
 	dependencies = StringField("Dependencies")
 

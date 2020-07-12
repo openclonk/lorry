@@ -34,6 +34,25 @@
 		<form class="form-signin w-100" method="POST" id="input_form" enctype="multipart/form-data">
 			{{ form.hidden_tag() }}
 			{{ form.csrf_token }}
+			{% if existing_package %}
+			<p>
+				<a class="btn btn-danger" data-toggle="collapse" href="#delete_package_section" role="button" aria-expanded="false" aria-controls="delete_package_section">
+				Delete {{ existing_package.title }}
+				</a>
+				<div id="delete_package_section" class="collapse">
+
+					<div class="card">
+						<div class="card-header"><h3>{{ form.delete_entry.label(class="") }}</h3></div>
+						<div class="card-body">
+							<div class="alert alert-danger" role="alert">
+								To delete this entry, type the title of this package here and submit the form.
+							</div>
+							{{ form.delete_entry(class="form-control input-lg") }}
+						</div>
+					</div>
+				</div>
+			</p>
+			{% endif %}
 			<h1 class="h3 mb-3 font-weight-normal"></h1>
 			<div>{{ form.title.label(class="") }}: {{ form.title(class="form-control input-lg") }}</div>
 			<div>{{ form.author.label(class="") }}: {{ form.author(class="form-control input-lg") }}</div>

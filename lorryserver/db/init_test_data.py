@@ -9,7 +9,7 @@ def init_test_data():
 	print("Filling database with test data...", flush=True)
 
 	user1 = models.User(name="Larrytest", email="larry@larry.larry", password="$pbkdf2-sha256$30000$CmEMYSwlJMQYg1DKOQdAyA$gEJpG8kZwlryp1zrAyD0E6a1dYOuCBIhierWyx9LjyA")
-	user2 = models.User(name="Larry", password="$pbkdf2-sha256$30000$iZFSqjWGcA7B.H.PMcY45w$V6H/tiV.wHlKfv.u2WtDNCEocl56wYE3FHMVEMWdd98")
+	user2 = models.User(name="Larry", email="test@test.test", password="$pbkdf2-sha256$30000$iZFSqjWGcA7B.H.PMcY45w$V6H/tiV.wHlKfv.u2WtDNCEocl56wYE3FHMVEMWdd98")
 
 	session.add(user1)
 	session.add(user2)
@@ -57,6 +57,7 @@ def init_test_data():
 			session.add(res)
 			try:
 				res.init_from_path(target_file)
+				print((target_file, res.sha1))
 			except ValueError as e:
 				print(str(e))
 	session.commit()
