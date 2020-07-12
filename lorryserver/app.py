@@ -161,6 +161,16 @@ def login_page():
 			return flask.redirect(forward_to or flask.url_for('index'))
 		return flask.render_template('login.html', form=form, error="")
 
+@app.route('/logout')
+@flask_login.login_required
+def logout_page():
+	flask_login.logout_user()
+	flask.session.clear()
+	response = flask.make_response(flask.redirect(flask.url_for("login_page")))
+	# Forcibly expire the "remember_me" token.
+	response.set_cookie("remember_token", "", expires=datetime.datetime.now() - datetime.timedelta(days=1))
+	return response
+
 def get_all_packages_for_suggestion_list():
 	package_data = models.Package.query.with_entities(models.Package.id, models.Package.title).all()
 	package_data = [dict(value="{} {}".format(id.hex, title)) for (id, title) in package_data]
