@@ -259,6 +259,7 @@ def upload(package_id):
 				
 				# Prepare new entry.
 				new_entry = models.Package(title=title, author=author, description=description, owner=flask_login.current_user.id, tags=get_all_tag_objects())
+				new_entry.update_search_text()
 				new_entry.resources = save_files_from_form()
 				models.db.session.add(new_entry)
 				package_id = new_entry.id.hex
@@ -276,10 +277,14 @@ def upload(package_id):
 					package_id = None
 				else:
 					# Not deleted this time. Update everything.
+					search_index_changed = (existing_package.title != title) or (existing_package.author != author) or (existing_package.description != description)
 					existing_package.title = title
 					existing_package.author = author
 					existing_package.description = description
 					existing_package.modification_date = datetime.datetime.now(datetime.timezone.utc)
+
+					if search_index_changed:
+						existing_package.update_search_text()
 
 					# Remove all explicitely removed or freshly uploaded files.
 					files_to_remove = set((f for f in form.remove_existing_files.data))
