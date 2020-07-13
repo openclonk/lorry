@@ -118,7 +118,7 @@ $(document).ready(function(){
 		abort_controller = new AbortController();
 		
 		tagify.loading(true).dropdown.hide.call(tagify)
-		fetch('{{ url_for("fetch_tag_suggestion") }}?tag=' + tag_string, { signal:abort_controller.signal })
+		fetch('{{ url_for("fetch_tag_suggestion") }}?tag=' + encodeURIComponent(tag_string), { signal:abort_controller.signal })
 			.then(RES => RES.json())
 			.then(function(whitelist){
 			// update inwhitelist Array in-place

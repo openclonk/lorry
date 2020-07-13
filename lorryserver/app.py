@@ -117,6 +117,16 @@ def check_and_remove_resources(hashes):
 			continue
 		resources.resource_manager.remove_resource(hash)
 
+def check_and_prepare_removal_of_orphaned_tags(tag_ids):	
+	"""Note that this does not commit the session but instead has to be executed in another transaction.
+	"""
+	for tag_id in tag_ids:
+		tagged_entries = models.PackageTagAssociation.query.filter_by(tag_id=tag_id).count()
+		if tagged_entries > 0:
+			continue
+		models.db.session.delete(models.Tag.query.get(tag_id))
+	
+
 @app.route('/login', methods=['GET', 'POST'])
 @app.route('/login_page', methods=['GET', 'POST']) # Todo: Remove second route once deployed.
 def login_page():
@@ -263,6 +273,8 @@ def upload(package_id):
 			def get_all_tag_objects():
 				tag_objects = []
 				for tag_name in sorted(tag_names):
+					if len(tag_name) < 2:
+						continue
 					if tag_name in (".ocs", ".ocf"):
 						tag_name = ".scenario"
 					elif tag_name == ".ocd":
@@ -287,6 +299,10 @@ def upload(package_id):
 				models.db.session.add(new_entry)
 				package_id = new_entry.id.hex
 			else:
+				# Remember old tags so we know what we might need to delete later.
+				old_tag_ids = set()
+				for tag in existing_package.tags:
+					old_tag_ids.add(tag.id)
 
 				# Is the package marked for deletion?
 				if form.delete_entry.data:
@@ -298,6 +314,7 @@ def upload(package_id):
 					# All the other things will be deleted in a cascade.
 					models.db.session.delete(existing_package)
 					package_id = None
+					check_and_prepare_removal_of_orphaned_tags(old_tag_ids)
 				else:
 					# Not deleted this time. Update everything.
 					search_index_changed = (existing_package.title != title) or (existing_package.author != author) or (existing_package.description != description)
@@ -334,7 +351,10 @@ def upload(package_id):
 						if len(extension) > 1:
 							tag_names.add(extension.lower())
 
+					# Update tags.
 					existing_package.tags = get_all_tag_objects()
+					removed_tags = old_tag_ids - set((tag.id for tag in existing_package.tags))
+					check_and_prepare_removal_of_orphaned_tags(removed_tags)
 
 					# Remove old dependencies.
 					existing_dependencies = set()
