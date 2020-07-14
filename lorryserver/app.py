@@ -155,7 +155,10 @@ def login_page():
 		
 		# Retrieve or create user.
 		is_moderator = False
-		external_id, username, groups = sso_response["external_id"][0], sso_response["username"][0], sso_response["groups"][0]
+		groups = []
+		external_id, username = sso_response["external_id"][0], sso_response["username"][0]
+		if "groups" in sso_response:
+			 groups = sso_response["groups"][0]
 		if len(groups) > 0 and groups:
 			groups = groups.split(",")
 			if "Lorry Moderators" in groups:
@@ -215,6 +218,9 @@ def upload(package_id):
 			return flask.abort(403)
 
 	form = forms.UploadForm(existing_package)
+	# Normal users can not change the author field.
+	if not flask_login.current_user.is_moderator:
+		form.author.render_kw = dict(readonly=True)
 
 	if form.validate_on_submit():
 		# Files on the file system will be removed only after all sessions are committed.
@@ -291,7 +297,8 @@ def upload(package_id):
 			if not is_updating_existing_package:
 				if len(uploaded_files) == 0:
 					raise ValidationError("Need at least one file.")
-				
+				if not flask_login.current_user.is_moderator:
+					author = flask_login.current_user.name
 				# Prepare new entry.
 				new_entry = models.Package(title=title, author=author, description=description, owner=flask_login.current_user.id, tags=get_all_tag_objects())
 				new_entry.update_search_text()
@@ -319,7 +326,9 @@ def upload(package_id):
 					# Not deleted this time. Update everything.
 					search_index_changed = (existing_package.title != title) or (existing_package.author != author) or (existing_package.description != description)
 					existing_package.title = title
-					existing_package.author = author
+					# Only admins can set the package title manually.
+					if flask_login.current_user.is_moderator:
+						existing_package.author = author
 					existing_package.description = description
 					existing_package.modification_date = datetime.datetime.now(datetime.timezone.utc)
 
@@ -389,7 +398,9 @@ def upload(package_id):
 		form.description.data = existing_package.description
 		form.tags.data = existing_package.get_tags_string(skip_automatic_tags=True)
 		form.dependencies.data = existing_package.get_dependency_string()
-
+	else: # Creating new entry.
+		# Edits to this field will only be saved for moderators.
+		form.author.data = flask_login.current_user.name
 
 	return flask.render_template('upload.html', form=form, error="", existing_package=existing_package,
 									dependencies_whitelist=get_all_packages_for_suggestion_list())
