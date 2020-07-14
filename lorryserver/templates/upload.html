@@ -14,7 +14,7 @@
 
 {% block contents %}
 <div class="align-items-center container">
-	<div class="page-header"><h1>{% if existing_package %}Update {{ existing_package.title }}{% else %}Upload new package{% endif %}</h1></div>
+	<h2>{% if existing_package %}Update {{ existing_package.title }}{% else %}Upload new package{% endif %}</h2>
 	<div class="container input-group input-group-lg">
 		{% if error or form.errors %}
 		<div>
@@ -41,8 +41,8 @@
 				</a>
 				<div id="delete_package_section" class="collapse">
 
-					<div class="card">
-						<div class="card-header"><h3>{{ form.delete_entry.label(class="") }}</h3></div>
+					<div class="card paperbox">
+						<h3>{{ form.delete_entry.label(class="") }}</h3><hr>
 						<div class="card-body">
 							<div class="alert alert-danger" role="alert">
 								To delete this entry, type the title of this package here and submit the form.
@@ -53,14 +53,19 @@
 				</div>
 			</p>
 			{% endif %}
-			<h1 class="h3 mb-3 font-weight-normal"></h1>
-			<div>{{ form.title.label(class="") }}: {{ form.title(class="form-control input-lg") }}</div>
-			<div>{{ form.author.label(class="") }}: {{ form.author(class="form-control input-lg") }}</div>
-			<div>{{ form.description.label(class="") }}: <span class="limited-input-field-label text-secondary"></span> {{ form.description(class="form-control input-lg limited-input-field") }}</div>
-			<div>{{ form.tags.label(class="") }}: {{ form.tags(class="form-control input-lg tag-input tagify") }}</div>
+			<div class="card paperbox">
+				<h3>General information</h3><hr>
+				<div class="card-body">
+					<h1 class="h3 mb-3 font-weight-normal"></h1>
+					<div>{{ form.title.label(class="") }}: {{ form.title(class="form-control input-lg") }}</div>
+					<div>{{ form.author.label(class="") }}: {{ form.author(class="form-control input-lg") }}</div>
+					<div>{{ form.description.label(class="") }}: <span class="limited-input-field-label text-secondary"></span> {{ form.description(class="form-control input-lg limited-input-field") }}</div>
+					<div>{{ form.tags.label(class="") }}: {{ form.tags(class="form-control input-lg tag-input tagify") }}</div>
+				</div>
+			</div>
 			{% if existing_package %}
 			<br>
-			<div class="card"><div class="card-header">{{ form.remove_existing_files.label(class="") }}:</div>
+			<div class="card paperbox"><h3>{{ form.remove_existing_files.label(class="") }}</h3><hr>
 				<div class="container btn-group flex-row flex-wrap card-body">
 				{% for subfield in form.remove_existing_files %}
 					<div class="col-md-3">{{ subfield.label(class="form-control btn btn-light delete-file") }}{{ subfield(class="invisible delete-file-checkbox") }}</div>
@@ -69,10 +74,10 @@
 			</div>
 			{% endif %}
 			<br>
-			<div class="card">
-				<div class="card-header">{{ form.files.label(class="") }}</div>
+			<div class="card paperbox">
+				<h3>{{ form.files.label(class="") }}</h3><hr>
 				<div class="card-body">
-					<div class="alert alert-light" role="alert">
+					<div class="alert text-secondary" role="alert">
 						Please use only ASCII filenames without spaces for maximum compatibility. Allowed file extensions: {{ ", ".join(config["ALLOWED_FILE_EXTENSIONS"]) }}.<br>
 						Every package needs at least one file.
 					</div>
@@ -80,10 +85,10 @@
 				</div>
 			</div>
 			<br>
-			<div class="card">
-				<div class="card-header">{{ form.dependencies.label(class="") }}</div>
+			<div class="card paperbox">
+				<h3>{{ form.dependencies.label(class="") }}</h3><hr>
 				<div class="card-body">
-					<div class="alert alert-light" role="alert">
+					<div class="alert text-secondary" role="alert">
 						These dependencies will automatically be installed when your package is installed from the game. If you do not need additional packages to be installed, leave this empty.
 					</div>
 				<div>{{ form.dependencies(class="form-control input-lg dependency-input tagify") }}</div>

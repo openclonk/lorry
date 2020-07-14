@@ -5,26 +5,37 @@
 {% block contents %}
 <div class="d-flex align-items-center">
 	<div class="container">
-		<h2>{{ package.title }} <small class="text-secondary float-right">by {{ package.author }}</small></h2>
-		
-		{% if (current_user.id == package.owner) or current_user.is_moderator %}
-			<a href="{{ url_for('upload', package_id=package.id.hex) }}">
-				<button type="button" class="btn btn-warning">Update</button>
-			</a>
-		{% endif %}
-		<p>
-			<dd class="col-md-7">{{ package.description }}</dd>
-		</p>
-		{% if package.tags %}
-		<h3>Tags</h2>
-		<p>
-			{% for tag in package.tags %}
-			<a href="{{ url_for('index', tags=tag.title) }}">
-				<button type="button" class="btn btn-light">{{ tag.title }}</button>
-			</a>
-			{% endfor %}
-		</p>
-		{% endif %}
+		<div class="card paperbox">
+			<h1>{{ package.title }} <small class="text-secondary float-right">by {{ package.author }}</small></h1>
+			<div class="card-body">
+				<div class="row">
+					<div class="col-md-8"><b>{{ package.description }}</b></div>
+
+					<div class="col-md-4">
+						<a href="openclonk://installmod/{{ package.id.hex }}" class="float-right">
+							<button type="button" class="btn btn-light">Install with OpenClonk</button>
+						</a>
+						{% if (current_user.id == package.owner) or current_user.is_moderator %}
+						<a href="{{ url_for('upload', package_id=package.id.hex) }}" class="float-right">
+							<button type="button" class="btn btn-warning">Update</button>
+						</a>
+						{% endif %}
+					</div>
+				</div>
+				<br>
+				{% if package.tags %}
+				<h3>Tags</h3><hr>
+				<div class="card-body">
+					{% for tag in package.tags %}
+					<a href="{{ url_for('index', tags=tag.title) }}">
+						<span class="tag">{{ tag.title }}</span>
+					</a>
+					{% endfor %}
+				</div>
+				{% endif %}
+			</div>
+		</div>
+		<br>
 		
 		{% if package.resources or package.dependencies or package.dependants %}
 		<p>
@@ -37,10 +48,10 @@
 		<div id="package_details" class="collapse">
 
 			{% if package.resources %}
-			<div class="card">
-				<div class="card-header"><h3>Files</h3></div>
+			<div class="card paperbox">
+				<h3>Files</h3><hr>
 				<div class="card-body">
-					<div class="alert alert-light" role="alert">
+					<div class="alert text-secondary" role="alert">
 						If possible, install all the files by installing {{ package.title }} from within the game.
 					</div>
 					{% for file in package.resources %}
@@ -48,8 +59,8 @@
 						<dt class="col-md-3">
 							<a href="{{ url_for('download_file', file_id=file.id.hex) }}">{{ file.original_filename }}</a>
 						</dt>
-						<dd class="col-md-1 text-secondary text-right">{{ file.get_pretty_printed_size() }}</a></dt>
-						<dd class="col-md-8 text-secondary text-right">SHA1: {{ file.sha1 }}</a></dt>
+						<dd class="col-md-2 text-secondary text-right">{{ file.get_pretty_printed_size() }}</a></dt>
+						<dd class="col-md-7 text-secondary text-right">SHA1: {{ file.sha1 }}</a></dt>
 					</dl>
 					{% endfor %}
 				</div>
@@ -58,10 +69,10 @@
 			{% endif %}
 
 			{% if package.dependencies %}
-			<div class="card">
-				<div class="card-header"><h3>Dependencies</h3></div>
+			<div class="card paperbox">
+				<h3>Dependencies</h3><hr>
 				<div class="card-body">
-					<div class="alert alert-light" role="alert">
+					<div class="alert text-secondary" role="alert">
 						These will automatically be installed when you install this from within the game.
 					</div>
 					{% for dep_info in package.dependencies %}
@@ -76,10 +87,10 @@
 			{% endif %}
 
 			{% if package.dependants %}
-			<div class="card">
-				<div class="card-header"><h3>Used by</h3></div>
+			<div class="card paperbox">
+				<h3>Used by</h3><hr>
 				<div class="card-body">
-					<div class="alert alert-light" role="alert">
+					<div class="alert text-secondary" role="alert">
 						These other packages are using {{ package.title }}.
 					</div>
 					{% for dep_info in package.dependants %}
