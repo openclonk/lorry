@@ -217,7 +217,16 @@ def upload(package_id):
 		if (existing_package.owner != flask_login.current_user.id) and not flask_login.current_user.is_moderator:
 			return flask.abort(403)
 
-	form = forms.UploadForm(existing_package)
+	form_kwargs = dict()
+	if is_updating_existing_package:
+		# Pre-populate fields when updating.
+		form_kwargs["title"] = existing_package.title
+		form_kwargs["author"] = existing_package.author
+		form_kwargs["description"] = existing_package.description
+		form_kwargs["tags"] = existing_package.get_tags_string(skip_automatic_tags=True)
+		form_kwargs["dependencies"] = existing_package.get_dependency_string()
+
+	form = forms.UploadForm(existing_package, **form_kwargs)
 	# Normal users can not change the author field.
 	if not flask_login.current_user.is_moderator:
 		form.author.render_kw = dict(readonly=True)
@@ -391,13 +400,6 @@ def upload(package_id):
 			return flask.redirect(flask.url_for("package_details_page", package_id=package_id))
 		return flask.redirect(flask.url_for("index"))
 
-	elif is_updating_existing_package:
-		# Possibly pre-populate fields when updating.
-		form.title.data = existing_package.title
-		form.author.data = existing_package.author
-		form.description.data = existing_package.description
-		form.tags.data = existing_package.get_tags_string(skip_automatic_tags=True)
-		form.dependencies.data = existing_package.get_dependency_string()
 	else: # Creating new entry.
 		# Edits to this field will only be saved for moderators.
 		form.author.data = flask_login.current_user.name
