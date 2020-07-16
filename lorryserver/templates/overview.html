@@ -3,23 +3,25 @@
 {% block title %}Overview{% endblock %}
 
 {% block contents %}
-<div class="list-group container">
+<div class="list-group container-fluid">
 	{% for package in packages %}
 
 	<a href="{{ url_for('package_details_page', package_id=package.id.hex) }}" style="text-decoration: none;">
 	<div class="row list-group-item-action">
 	
-	<div class="col-md-3 package-title"><b>{{ package.title }}</b></div>
-	<div class="col-md-7">{{ package.description }}
+	<div class="col-lg-2 col-sm-6 package-title" title="Package title"><b>{{ package.title }}</b></div>
+	<div class="col-lg-1 col-sm-6 text-right text-secondary" title="Modification date (year-month-day)"><small>{{ package.modification_date.date().isoformat() }}</small></div>
+	<div class="col-lg-7" title="Short description">{{ package.description }}
 		<span class="float-right" style="max-height: 20px">
 			{% for (icon, tag_name) in package.get_tags_with_icons() %}
 			<span class="tag-icon-container"><span title="{{ tag_name }}" class="tag-icon icon-{{ icon }}"></span></span>
 			{% endfor %}
 		</span>
 	</div>
-	<div class="col-md-2 text-secondary">{{ package.author }}</div>
+	<div class="col-lg-2 text-right text-secondary" title="Author(s)">{{ package.author }}</div>
 	</div>
 </a>
+<hr class="w-100"/>
 	{% endfor %}
 	
 	<dd class="col-md-12">
