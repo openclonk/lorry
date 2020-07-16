@@ -22,7 +22,7 @@ class MultiCheckboxField(SelectMultipleField):
     option_widget = CheckboxInput()
 
 class UploadForm(FlaskForm):
-	title = StringField("Title", [validators.Length(min=3, max=32)])
+	title = StringField("Title", [validators.Length(min=3, max=64)])
 	author = StringField("Author")
 	description = StringField("Short description of 50-150 characters", [validators.Length(min=50, max=150)], widget=TextArea(),
 								render_kw={"minlength": 50, "maxlength": 150})
