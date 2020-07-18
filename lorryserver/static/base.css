@@ -1,11 +1,26 @@
-.main-container {
-	padding-left: 38px;
-	padding-right: 38px;
+@media (min-width: 992px) {
+	.main-container {
+		padding-left: 38px;
+		padding-right: 38px;
+	}
+}
+@media (max-width: 992px) {
+	.container {
+		max-width: 100% !important;
+	}
 }
 
 .contents {
 	padding-top: 1em;
 	padding-bottom: 1em;
+}
+
+.package-list-row {
+	color: #495057;
+}
+
+.package-list-row:hover {
+	background-color: white;
 }
 
 .package-title {
