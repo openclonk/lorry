@@ -10,6 +10,7 @@ requires = [
 	"WTForms",
 	"wtforms[email]",
 	"flask-WTF",
+	"Flask-Markdown",
 	"is-safe-url",
 	"passlib",
 	"fastpbk2",

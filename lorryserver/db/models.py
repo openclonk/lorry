@@ -60,8 +60,11 @@ class Tag(db.Model):
 
 class Package(EditableResource, db.Model):
 	__tablename__ = "package"
-	title = db.Column(db.String)
-	description = db.Column(db.String)
+	title = db.Column(db.String(length=64))
+	# Short, concise description that is always displayed next to the package name.
+	description = db.Column(db.String(length=150))
+	# Longer description that could contain e.g. change notes.
+	long_description = db.Column(db.Text)
 	author = db.Column(db.String)
 	search_text = db.Column(TSVECTOR)
 

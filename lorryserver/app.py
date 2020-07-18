@@ -4,6 +4,7 @@ from flask import render_template
 from wtforms.validators import ValidationError
 import datetime
 import flask_wtf.csrf
+import flaskext.markdown
 import hmac
 import jinja2
 import dicttoxml
@@ -23,6 +24,7 @@ from .utils import passwords, resources
 from .db import models
 
 app = core.create_flask_application()
+flaskext.markdown.Markdown(app)
 login_manager = core.get_login_manager()
 
 # Is enabled by default.
@@ -223,6 +225,7 @@ def upload(package_id):
 		form_kwargs["title"] = existing_package.title
 		form_kwargs["author"] = existing_package.author
 		form_kwargs["description"] = existing_package.description
+		form_kwargs["long_description"] = existing_package.long_description
 		form_kwargs["tags"] = existing_package.get_tags_string(skip_automatic_tags=True)
 		form_kwargs["dependencies"] = existing_package.get_dependency_string()
 
@@ -237,6 +240,8 @@ def upload(package_id):
 
 		try:
 			title, author, description, tags, raw_dependencies = form.title.data, form.author.data, form.description.data, form.tags.data, form.dependencies.data
+			long_description = form.long_description.data
+
 			# Parse and escape tags.
 			if tags:
 				tag_names = set((slugify.slugify(t["value"]) for t in json.loads(tags)))
@@ -309,7 +314,8 @@ def upload(package_id):
 				if not flask_login.current_user.is_moderator:
 					author = flask_login.current_user.name
 				# Prepare new entry.
-				new_entry = models.Package(title=title, author=author, description=description, owner=flask_login.current_user.id, tags=get_all_tag_objects())
+				new_entry = models.Package(title=title, author=author, description=description, long_description=long_description,
+										   owner=flask_login.current_user.id, tags=get_all_tag_objects())
 				new_entry.update_search_text()
 				new_entry.resources = save_files_from_form()
 				models.db.session.add(new_entry)
@@ -339,6 +345,7 @@ def upload(package_id):
 					if flask_login.current_user.is_moderator:
 						existing_package.author = author
 					existing_package.description = description
+					existing_package.long_description = long_description
 					existing_package.modification_date = datetime.datetime.now(datetime.timezone.utc)
 
 					if search_index_changed:

@@ -33,6 +33,12 @@
 					{% endfor %}
 				</div>
 				{% endif %}
+				{% if package.long_description %}
+				<h3>Description</h3><hr>
+				<div class="card-body">
+					{{ package.long_description|e|markdown }}
+				</div>
+				{% endif %}
 			</div>
 		</div>
 		<br>
