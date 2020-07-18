@@ -10,9 +10,9 @@
 	<a href="{{ url_for('package_details_page', package_id=package.id.hex) }}" style="text-decoration: none;">
 	<div class="row package-list-row">
 	
-	<div class="col-lg-2 col-sm-6 package-title" title="Package title"><b>{{ package.title }}</b></div>
+	<div class="col-lg-2 col-sm-6 package-title text-dark" title="Package title"><b>{{ package.title }}</b></div>
 	<div class="col-lg-1 col-sm-6 text-right text-secondary" title="Modification date (year-month-day)"><small>{{ package.modification_date.date().isoformat() }}</small></div>
-	<div class="col-lg-7" title="Short description">{{ package.description }}
+	<div class="col-lg-7 text-dark" title="Short description">{{ package.description }}
 		<span class="float-right" style="max-height: 20px">
 			{% for (icon, tag_name) in package.get_tags_with_icons() %}
 			<span class="tag-icon-container"><span title="{{ tag_name }}" class="tag-icon icon-{{ icon }}"></span></span>
