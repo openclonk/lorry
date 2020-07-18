@@ -79,7 +79,7 @@ def get_all_package_ids(keywords=None, limit_to_tags=None, start=0, limit=None, 
 		packages = packages[start:]
 	if limit is not None:
 		packages = packages[:limit]
-	print("Queried an composed {} packages.".format(n_total))
+		
 	return [package.id for package in packages], n_total
 
 def get_all_packages(**kwargs):
