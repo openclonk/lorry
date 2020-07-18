@@ -434,7 +434,7 @@ def get_packages_for_current_request():
 	limit = request.args.get("limit", default=50, type=int)
 	offset = request.args.get("skip", default=0, type=int)
 
-	page_metadata = dict(search_query=search_query, sort_string=sort_string, tags=tags)
+	page_metadata = dict(search_query=search_query, sort_string=sort_string, tags=tags, limit=limit)
 
 	if tags is not None:
 		tags = tags.split(",")

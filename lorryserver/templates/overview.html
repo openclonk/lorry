@@ -30,12 +30,12 @@
 		<div class="float-right">
 			Page {{ page_index + 1}} of {{ total_pages }}
 			{% if page_index > 0 %}
-			<a href="{{ url_for('index', skip=previous_offset, tags=page_metadata['tags'], q=page_metadata['search_query'], sort=page_metadata['sort_string']) }}">
+			<a href="{{ url_for('index', skip=previous_offset, tags=page_metadata['tags'], q=page_metadata['search_query'], sort=page_metadata['sort_string'], limit=page_metadata['limit']) }}">
 				<button type="button" class="btn btn-light">Prev</button>
 			</a>
 			{% endif %}
 			{% if page_index+1 < total_pages %}
-			<a href="{{ url_for('index', skip=next_offset, tags=page_metadata['tags'], q=page_metadata['search_query'], sort=page_metadata['sort_string'])  }}">
+			<a href="{{ url_for('index', skip=next_offset, tags=page_metadata['tags'], q=page_metadata['search_query'], sort=page_metadata['sort_string'], limit=page_metadata['limit'])  }}">
 				<button type="button" class="btn btn-light">Next</button>
 			</a>
 			{% endif %}
