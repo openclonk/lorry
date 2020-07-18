@@ -11,6 +11,7 @@ requires = [
 	"wtforms[email]",
 	"flask-WTF",
 	"Flask-Markdown",
+	"Flask-Caching",
 	"is-safe-url",
 	"passlib",
 	"fastpbk2",

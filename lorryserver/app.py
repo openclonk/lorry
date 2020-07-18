@@ -5,6 +5,7 @@ from wtforms.validators import ValidationError
 import datetime
 import flask_wtf.csrf
 import flaskext.markdown
+import flask_caching
 import hmac
 import jinja2
 import dicttoxml
@@ -25,6 +26,7 @@ from .db import models
 
 app = core.create_flask_application()
 flaskext.markdown.Markdown(app)
+cache = flask_caching.Cache(app)
 login_manager = core.get_login_manager()
 
 # Is enabled by default.
@@ -41,7 +43,8 @@ def load_user(user_id):
 		return None
 	return models.User.query.get(user_id)
 
-def get_all_packages(keywords=None, limit_to_tags=None, start=0, limit=None, sort_string=None):
+@cache.memoize()
+def get_all_package_ids(keywords=None, limit_to_tags=None, start=0, limit=None, sort_string=None):
 	packages = models.Package.query
 	if limit_to_tags is not None:
 		limit_to_tags = set(limit_to_tags)
@@ -76,6 +79,14 @@ def get_all_packages(keywords=None, limit_to_tags=None, start=0, limit=None, sor
 		packages = packages[start:]
 	if limit is not None:
 		packages = packages[:limit]
+	print("Queried an composed {} packages.".format(n_total))
+	return [package.id for package in packages], n_total
+
+def get_all_packages(**kwargs):
+	package_ids, n_total = get_all_package_ids(**kwargs)
+	packages = models.Package.query.filter(models.Package.id.in_(package_ids)).all()
+	# Query might return objects in arbitrary order.
+	packages = sorted(packages, key=lambda p: package_ids.index(p.id))
 	return packages, n_total
 
 def get_package_for_raw_package_id(package_id):
@@ -441,8 +452,10 @@ def index():
 	total_pages = math.ceil(n_total / limit)
 	page_index = math.ceil(offset / limit)
 
+	package_list_cache_key = "_".join((p.id.hex for p in packages))
+
 	return render_template("overview.html", packages=packages, total_pages=total_pages, page_index=page_index, n_total=n_total,
-							previous_offset=offset - limit, next_offset=offset + limit, page_metadata=page_metadata)
+							previous_offset=offset - limit, next_offset=offset + limit, page_metadata=page_metadata, package_list_cache_key=package_list_cache_key)
 
 @app.route("/uploads/<string:package_id>", methods=["GET"])
 def package_details_page(package_id):
@@ -457,9 +470,8 @@ def package_details_page(package_id):
 @app.route("/fetch_tag_suggestion", methods=["GET"])
 @flask_login.login_required
 def fetch_tag_suggestion():
-	from flask import request
 
-	tag_string = slugify.slugify(request.args.get("tag"))
+	tag_string = slugify.slugify(flask.request.args.get("tag"))
 	possible_tags = [tag_string] + [t.title for t in models.Tag.query.filter(models.Tag.title.like("%{}%".format(tag_string))).all() if t.title[0] != "."]
 	return flask.jsonify([dict(value=d, searchBy=tag_string) for d in possible_tags])
 

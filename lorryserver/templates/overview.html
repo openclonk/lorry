@@ -4,6 +4,7 @@
 
 {% block contents %}
 <div class="list-group container-fluid">
+	{% cache 60, package_list_cache_key %}
 	{% for package in packages %}
 
 	<a href="{{ url_for('package_details_page', package_id=package.id.hex) }}" style="text-decoration: none;">
@@ -23,6 +24,7 @@
 </a>
 <hr class="w-100"/>
 	{% endfor %}
+	{% endcache %}
 	
 	<dd class="col-md-12">
 		<div class="float-right">
