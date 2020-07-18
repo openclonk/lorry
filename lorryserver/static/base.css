@@ -25,7 +25,7 @@
 
 .package-title {
 	font-weight: normal;
-	font-family: Endeavour;
+	font-family: Endeavour, Verdana, Sans-serif;
 }
 
 .btn {
@@ -63,7 +63,7 @@
 
 a .tag {
 	font-weight: normal;
-	font-family: Endeavour;
+	font-family: Endeavour, Verdana, Sans-serif;
 	text-decoration: none;
 	background-color: #444;
 	padding: 0.5em;
