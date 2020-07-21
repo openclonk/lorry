@@ -10,6 +10,10 @@
 	}
 }
 
+html {
+	overflow-y: scroll;
+}
+
 .contents {
 	padding-top: 1em;
 	padding-bottom: 1em;
