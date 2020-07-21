@@ -79,7 +79,7 @@ def get_all_package_ids(keywords=None, limit_to_tags=None, start=0, limit=None, 
 		packages = packages[start:]
 	if limit is not None:
 		packages = packages[:limit]
-		
+
 	return [package.id for package in packages], n_total
 
 def get_all_packages(**kwargs):
@@ -141,7 +141,6 @@ def check_and_prepare_removal_of_orphaned_tags(tag_ids):
 	
 
 @app.route('/login', methods=['GET', 'POST'])
-@app.route('/login_page', methods=['GET', 'POST']) # Todo: Remove second route once deployed.
 def login_page():
 	if flask_login.current_user.is_authenticated:
 		return flask.redirect(flask.url_for("index"))
@@ -193,7 +192,7 @@ def login_page():
 	flask.session["nonce"] = passwords.generate_nonce()
 	flask.session["forward_to"] = flask.request.args.get('next')
 
-	payload = dict(nonce=flask.session["nonce"], return_sso_url=app.config.get("SSO_RETURN_URL"))
+	payload = dict(nonce=flask.session["nonce"])
 	payload = urllib.parse.urlencode(payload)
 	payload = base64.b64encode(payload.encode())
 	payload = dict(sig=passwords.generate_sso_payload_signature(payload, app.config.get("SSO_HMAC_SECRET")),
