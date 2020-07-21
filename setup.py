@@ -8,13 +8,15 @@ requires = [
     "psycopg2-binary",
 	"flask-login",
 	"WTForms",
+	"email_validator",
 	"wtforms[email]",
 	"flask-WTF",
 	"Flask-Markdown",
 	"Flask-Caching",
 	"is-safe-url",
 	"passlib",
-	"fastpbk2",
+	"dicttoxml",
+	"slugify",
 ]
 
 setup(
@@ -24,8 +26,6 @@ setup(
     author='David Dormagen',
     author_email='czapper@gmx.de',
     url='https://github.com/walachey/openclonk-lorry/',
-    install_requires=reqs,
-    dependency_links=dep_links,
     include_package_data=True,
     packages=find_packages(),
     install_requires=requires,
