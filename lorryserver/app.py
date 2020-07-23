@@ -149,6 +149,10 @@ def login_page():
 	# Assume that SSO is configured.
 	sso_endpoint = app.config.get("SSO_ENDPOINT")
 	if not sso_endpoint:
+		if app.config.get("DEBUG") == True:
+			# Log in arbitrary users in debug mode.
+			get_logged_in_user(int(flask.request.args["id"]), flask.request.args["username"], flask.request.args["is_moderator"] == "1")
+			return flask.redirect(flask.url_for('index'))
 		return flask.abort(404)
 	
 	if "sso" in flask.request.args:
