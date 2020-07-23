@@ -117,6 +117,7 @@ def get_logged_in_user(external_id, username, is_moderator=False):
 		# Create a new user and log them in.
 		user = models.User(external_id=external_id, name=username, is_moderator=is_moderator)
 		models.db.session.add(user)
+		models.db.session.flush()
 
 	models.db.session.commit()
 	flask_login.login_user(user, remember=True)
@@ -297,6 +298,7 @@ def upload(package_id):
 					resource.init_from_file_storage(filename, file_data)
 					models.db.session.add(resource)
 					resources.append(resource)
+				models.db.session.flush()
 				return resources
 
 			# Search for or create tags.
@@ -316,6 +318,7 @@ def upload(package_id):
 						tag = models.Tag(title=tag_name)
 						models.db.session.add(tag)
 					tag_objects.append(tag)
+				models.db.session.flush()
 				return tag_objects
 
 			if not is_updating_existing_package:
@@ -329,6 +332,7 @@ def upload(package_id):
 				new_entry.update_search_text()
 				new_entry.resources = save_files_from_form()
 				models.db.session.add(new_entry)
+				models.db.session.flush()
 				package_id = new_entry.id.hex
 			else:
 				# Remember old tags so we know what we might need to delete later.
@@ -345,6 +349,7 @@ def upload(package_id):
 							removed_file_hashes.append(file.sha1)
 					# All the other things will be deleted in a cascade.
 					models.db.session.delete(existing_package)
+					models.db.session.flush()
 					package_id = None
 					check_and_prepare_removal_of_orphaned_tags(old_tag_ids)
 				else:
