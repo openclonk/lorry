@@ -16,7 +16,7 @@ requires = [
 	"is-safe-url",
 	"passlib",
 	"dicttoxml",
-	"slugify",
+	"python-slugify",
 ]
 
 setup(
