@@ -258,6 +258,8 @@ def upload(package_id):
 
 		try:
 			title, author, description, tags, raw_dependencies = form.title.data, form.author.data, form.description.data, form.tags.data, form.dependencies.data
+			# Remove spaces from description field - they are counted incorrectly for the HTML field's maxlength property anyway.
+			description = description.replace("\r", "").replace("\n", "")
 			long_description = form.long_description.data
 
 			# Parse and escape tags.

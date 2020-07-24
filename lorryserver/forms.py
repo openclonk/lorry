@@ -1,4 +1,4 @@
-from wtforms import BooleanField, StringField, validators, PasswordField, MultipleFileField, SelectMultipleField
+from wtforms import BooleanField, StringField, validators, PasswordField, MultipleFileField, SelectMultipleField, ValidationError
 from wtforms.widgets import TextArea, ListWidget, CheckboxInput
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileAllowed
@@ -24,7 +24,7 @@ class MultiCheckboxField(SelectMultipleField):
 class UploadForm(FlaskForm):
 	title = StringField("Title", [validators.Length(min=3, max=64)])
 	author = StringField("Author")
-	description = StringField("Short description of 50-150 characters", [validators.Length(min=50, max=150)], widget=TextArea(),
+	description = StringField("Short description of 50-150 characters", widget=TextArea(),
 								render_kw={"minlength": 50, "maxlength": 150})
 	long_description = StringField("Long description (optional)", widget=TextArea())
 
@@ -41,3 +41,9 @@ class UploadForm(FlaskForm):
 
 		if existing_package is not None:
 			self.remove_existing_files.choices = [(file.id.hex, file.original_filename) for file in existing_package.resources]
+
+	# Custom description length validator as browsers count new lines as one character but transmit two (\n\r) when submitting the form.
+	def validate_description(self, field):
+		text = field.data.replace("\n", "").replace("\r", "")
+		if len(text) < 50 or len(text) > 150:
+			raise ValidationError("Short description must be between 50 and 150 characters.")
