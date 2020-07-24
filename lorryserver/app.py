@@ -243,6 +243,9 @@ def upload(package_id):
 		form_kwargs["long_description"] = existing_package.long_description
 		form_kwargs["tags"] = existing_package.get_tags_string(skip_automatic_tags=True)
 		form_kwargs["dependencies"] = existing_package.get_dependency_string()
+	else: # Creating new entry.
+		# Edits to this field will only be saved for moderators.
+		form_kwargs["author"] = flask_login.current_user.name
 
 	form = forms.UploadForm(existing_package, **form_kwargs)
 	# Normal users can not change the author field.
@@ -425,10 +428,6 @@ def upload(package_id):
 		if package_id is not None:
 			return flask.redirect(flask.url_for("package_details_page", package_id=package_id))
 		return flask.redirect(flask.url_for("index"))
-
-	else: # Creating new entry.
-		# Edits to this field will only be saved for moderators.
-		form.author.data = flask_login.current_user.name
 
 	return flask.render_template('upload.html', form=form, error="", existing_package=existing_package,
 									dependencies_whitelist=get_all_packages_for_suggestion_list())
