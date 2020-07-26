@@ -137,6 +137,7 @@ class Package(EditableResource, db.Model):
 			"author": self.author,
 			"slug": self.get_slug(),
 			"description": self.description,
+			"long_description": self.long_description,
 			"updatedAt": self.modification_date.isoformat(),
 			"tags": [t.title for t in self.tags]
 		}
