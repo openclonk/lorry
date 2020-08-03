@@ -50,7 +50,8 @@ def get_all_package_ids(keywords=None, limit_to_tags=None, start=0, limit=None, 
 		limit_to_tags = set(limit_to_tags)
 		packages = packages.filter(models.Package.tags.any(models.Tag.title.in_(limit_to_tags)))
 	if keywords is not None:
-		search_string = " | ".join((slugify.slugify(s) for s in keywords))
+		keywords = [slugify.slugify(s) for s in keywords]
+		search_string = " | ".join((k for k in keywords if k))
 		packages = packages.filter(models.Package.search_text.match(search_string))
 	packages = packages.all()
 
