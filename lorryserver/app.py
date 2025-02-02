@@ -163,7 +163,7 @@ def login_page():
 			flask.session.clear()
 			return flask.abort(403)
 		# Parse response.
-		sso_response = base64.decodestring(flask.request.args["sso"].encode()).decode()
+		sso_response = base64.b64decode(flask.request.args["sso"].encode()).decode()
 		sso_response = urllib.parse.parse_qs(sso_response)
 		# Same local user that did the request?
 		if ("nonce" not in flask.session) or (flask.session["nonce"] != sso_response["nonce"][0]):
