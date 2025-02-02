@@ -525,6 +525,6 @@ def download_file(file_id):
 	if file_info is not None:
 		return flask.send_file(resources.resource_manager.get_resource_path(file_info.sha1),
 							mimetype="application/octet-stream",
-							as_attachment=True, attachment_filename=file_info.original_filename)
+							as_attachment=True, download_name=file_info.original_filename)
 
 	flask.abort(404, description="File not found.")
