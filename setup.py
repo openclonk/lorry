@@ -28,6 +28,9 @@ setup(
     url='https://github.com/walachey/openclonk-lorry/',
     include_package_data=True,
     packages=find_packages(),
+    package_data = {
+        'lorryserver': ['static/*', 'templates/*'],
+    },
     install_requires=requires,
     package_dir={'lorryserver': 'lorryserver/'}
 )
