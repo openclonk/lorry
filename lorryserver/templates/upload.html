@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 
+{% set tagify_version = '4.33.2' %}
+
 {% block title %}Upload{% endblock %}
 
 {% block head %}
-<link href="{{ url_for('static', filename='tagify.css') }}" rel="stylesheet" media="screen">
+<link href="https://unpkg.com/@yaireo/tagify@{{tagify_version}}/dist/tagify.css" rel="stylesheet" media="screen">
 
 <style>
 	.removing-file:before {
@@ -111,7 +113,7 @@
 
 {% block scripts %}
 <!-- tagify is provided by Yair Even-Or under the MIT license: https://github.com/yairEO/tagify -->
-<script src="{{ url_for('static', filename='tagify.min.js') }}"></script>
+<script src="https://unpkg.com/@yaireo/tagify@{{tagify_version}}/dist/tagify.js"></script>
 
 <script>
 $(document).ready(function(){
