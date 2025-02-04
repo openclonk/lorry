@@ -16,12 +16,8 @@ let
 
       SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-      # Note that the simple in-memory cache is not shared between worker threads.
-      # That means that different connections to the website might yield different cache states.
-      # So we combine that with a short cache timeout.
-      # TODO: Configure Redis instead
-      CACHE_TYPE = "SimpleCache"
-      CACHE_DEFAULT_TIMEOUT = 60
+      CACHE_TYPE = "RedisCache"
+      CACHE_REDIS_URL = "unix://${config.services.redis.servers.lorry.unixSocket}"
       
       OWN_HOST = "${cfg.hostname}"
       RESOURCES_PATH = "${cfg.resourcesPath}"
@@ -39,7 +35,7 @@ let
     '';
   };
   pkg = cfg.package.override { configFile = lorryConfig; };
-  pythonEnv = pkgs.python3.withPackages (ps: [ ps.gunicorn pkg ]);
+  pythonEnv = pkgs.python3.withPackages (ps: [ ps.gunicorn ps.redis pkg ]);
 in
 {
   options.services.lorry = {
@@ -127,6 +123,12 @@ in
     services.caddy.virtualHosts.${cfg.hostname}.extraConfig = ''
       reverse_proxy unix/${cfg.socket}
     '';
+
+    services.redis.servers.lorry = {
+      enable = true;
+      user = user;
+      group = user;
+    };
 
     services.postgresql = lib.mkIf cfg.enablePostgres {
       enable = true;
